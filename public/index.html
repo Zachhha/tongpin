@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f4efe4" />
+    <meta
+      name="description"
+      content="同频：2–4 人合作写词游戏。每人只写一个词，所有人写出同一个词才算成功。"
+    />
+    <meta property="og:title" content="同频 · 想到一起，才算数" />
+    <meta
+      property="og:description"
+      content="没有讨论，没有提示。每人只写一个词，看看你们是不是同一频段。"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og-card.svg" />
+    <title>同频 · 想到一起，才算数</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳到主要内容</a>
+    <div class="page-noise" aria-hidden="true"></div>
+    <div id="app">
+      <div class="boot" role="status" aria-live="polite">
+        <div class="boot-mark" aria-hidden="true"><i></i><i></i></div>
+        <p>正在调频…</p>
+      </div>
+    </div>
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+    <div id="modal-root"></div>
+    <div id="confetti-layer" class="confetti-layer" aria-hidden="true"></div>
+    <noscript>
+      <div class="noscript">这个游戏需要开启 JavaScript 才能玩。</div>
+    </noscript>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

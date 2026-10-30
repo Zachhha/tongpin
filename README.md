@@ -1,0 +1,146 @@
+# 同频 · TONGPIN
+
+> 想到一起，才算数。
+
+一个 2–4 人实时合作的网页小游戏。没有讨论，没有提示，每人只写一个词；所有人写出同一个非空词语，才算成功。
+
+<p align="center">
+  <img src="preview/home.jpg" width="720" alt="同频首页" />
+</p>
+
+<p align="center">
+  <img src="preview/lobby.jpg" width="720" alt="组队等待界面" />
+  <img src="preview/writing.jpg" width="720" alt="写词界面" />
+</p>
+
+## 快速开始
+
+需要 Node.js 18+，项目零依赖。
+
+```bash
+cd tongpin
+node server.js
+```
+
+或者双击 `start.cmd`（Windows）。
+
+打开终端里打印的地址：
+
+- 本机：`http://localhost:8787`
+- 同一 Wi-Fi 的朋友：终端里打印的 `http://192.168.x.x:8787` 地址
+
+朋友打开链接、输入房间码就能入座。最多 4 人，满 2 人开局。
+
+如果朋友打不开局域网地址，检查两件事：大家连的是同一个 Wi-Fi；Windows 防火墙允许 Node.js 接收入站连接。
+
+换端口：
+
+```powershell
+$env:PORT=8790; node server.js
+```
+
+## 跨城市 / 公网联机
+
+不在同一个城市时，局域网地址无效，需要一个公网入口。
+
+### Render 固定链接（推荐）
+
+项目自带 `render.yaml`，可以免费部署到 Render：
+
+1. 把项目上传到 GitHub 仓库（根目录要有 `render.yaml`）
+2. 登录 [Render](https://render.com)，用 GitHub 授权
+3. 点 **New → Blueprint**，选择这个仓库，点 **Apply**
+4. 等部署完成，得到 `https://xxxx.onrender.com` 固定地址
+
+Render 会自动提供 `RENDER_EXTERNAL_URL`，服务端会用它生成邀请链接，不需要手动设置 `PUBLIC_URL`。
+
+免费实例闲置一段时间会休眠，打开链接等待几十秒即可唤醒；游戏进行中有请求，不会中途休眠。房间数据在内存里，服务重启后会清空。
+
+### 临时公网链接（不推荐长期使用）
+
+本机已经带 OpenSSH 时，可以用 localhost.run 开一个临时隧道：
+
+```powershell
+# 终端 1：启动游戏
+node server.js
+
+# 终端 2：开隧道（会打印 https://xxxx.lhr.life）
+ssh -R 80:localhost:8787 nokey@localhost.run
+```
+
+拿到公网地址后，带上 `PUBLIC_URL` 重启游戏：
+
+```powershell
+$env:PUBLIC_URL="https://xxxx.lhr.life"
+node server.js
+```
+
+然后打开公网地址创建房间，把大厅里的「公网邀请链接」发给朋友即可。
+
+临时隧道适合一局游戏，进程停止或电脑休眠后链接会失效；免费隧道服务也可能主动更换域名。如果页面能打开、但操作时提示“连接不到服务器 / Failed to fetch”，通常就是隧道地址变了：查看隧道窗口最新打印的地址，重启服务并设置新的 `PUBLIC_URL` 即可。
+
+需要长期固定入口，建议用 Cloudflare Tunnel 绑定自己的域名，或把项目部署到 Render / Railway / Fly.io 这类 Node.js 托管平台，并设置环境变量 `PUBLIC_URL=https://你的域名`。
+
+> 公网房间靠四位房间码 + 玩家令牌区分身份。不要把这个地址当成私密网盘使用；房间数据只保存在内存里，重启即清空。
+
+## 玩法
+
+1. **2–4 人各自写一个词。** 不能讨论，也不能提示。
+2. **全员提交或倒计时结束，一起揭晓。** 提交后不能修改；超时使用最后一次同步成功的草稿。
+3. **所有人写出相同的非空词语，才算成功。** 没撞上，就从上一轮的词继续联想，不限轮数。
+4. **揭晓后，全员点击「继续」，才开始下一轮。** 掉线的玩家不计入继续人数。
+
+判定会忽略大小写、全半角和首尾空格，但不会把近义词当作同一个词。
+
+### 房间设置
+
+房主可以在开局前把每轮时间设为 45 / 60 / 90 / 120 秒。开局后不能加入新玩家。
+
+## 特性
+
+- 房间码 + 邀请链接，无需注册
+- 服务端权威计时，超时自动揭晓
+- 草稿自动同步，随时显示同步状态
+- SSE 实时广播，断线自动重连
+- 刷新页面可以回到原来的座位
+- 手机 / 平板响应式布局
+- 词链历史、全员继续、同轮重开
+- 零第三方依赖，单个 Node 进程即可运行
+
+## 测试
+
+```bash
+node test/run.js
+```
+
+也可以用标准的 `node --test`（部分受限环境不允许测试运行器创建子进程）。
+
+覆盖：
+
+- 房间人数上限、重名、房主权限
+- 提交前词义隐私、提交后锁定
+- 全同词成功、大小写 / 全半角 / 空格归一化
+- 超时使用草稿、全员继续、断线重连推进
+- HTTP / SSE 端到端联机流程
+
+## 结构
+
+```text
+tongpin/
+├─ server.js          # HTTP、SSE、静态文件与计时扫描
+├─ lib/game.js        # 房间与回合状态机（无网络依赖）
+├─ public/
+│  ├─ index.html
+│  ├─ styles.css
+│  └─ app.js          # 单页客户端，无构建步骤
+├─ test/
+│  ├─ game.test.js
+│  └─ server.test.js
+├─ start.cmd
+├─ preview/           # 界面预览图
+└─ package.json
+```
+
+## 说明
+
+房间数据保存在内存里，服务进程重启后会清空。空闲 6 小时的房间会被自动回收。
