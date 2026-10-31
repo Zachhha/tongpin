@@ -188,6 +188,31 @@ test('host leaves the lobby and the next player takes over', () => {
   errorOf(() => game.leaveLobby(room.code, players[1].id, players[1].token));
 });
 
+test('spectators join without taking a seat and cannot act as players', () => {
+  const { game, room, players, host } = makeRoom(2);
+  game.start(room.code, host.id, host.token);
+  game.saveDraft(room.code, players[0].id, players[0].token, '海');
+  game.saveDraft(room.code, players[1].id, players[1].token, '夏天');
+
+  const { spectator } = game.addSpectator(room.code, '看客');
+  assert.equal(room.players.length, 2);
+  assert.equal(room.spectators.length, 1);
+
+  const writingView = game.view(room, spectator.id, 'spectator');
+  assert.equal(writingView.role, 'spectator');
+  assert.equal(writingView.viewer.isSpectator, true);
+  assert.equal(writingView.spectatorCount, 1);
+  assert.equal(writingView.canStart, false);
+  assert.ok(writingView.players.every((player) => player.word === null));
+
+  errorOf(() => game.submit(room.code, spectator.id, spectator.token, '偷看'));
+  game.reveal(room.code, 'timeout');
+  const revealView = game.view(room, spectator.id, 'spectator');
+  assert.equal(revealView.result.entries.length, 2);
+  assert.ok(revealView.players.every((player) => typeof player.word === 'string'));
+  errorOf(() => game.continueRound(room.code, spectator.id, spectator.token));
+});
+
 test('a successful game can be replayed by the same players', () => {
   const { game, room, players, host } = makeRoom(2);
   game.start(room.code, host.id, host.token);

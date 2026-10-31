@@ -170,6 +170,10 @@ function homeHeader() {
   </header>`;
 }
 
+function spectatorTag(room) {
+  return room.viewer?.isSpectator ? '<span class="spectator-tag">观战</span>' : '';
+}
+
 function roomHeader(room) {
   const label = formatPhase(room.phase);
   const round = room.phase === 'lobby' ? '—' : pad2(room.round);
@@ -179,6 +183,7 @@ function roomHeader(room) {
       <span>ROUND</span><b>${round}</b><i></i><em class="round-word">${esc(label)}</em>
     </div>
     <div class="game-tools">
+      ${spectatorTag(room)}
       ${soundButton()}
       ${iconButton('open-how', 'help', '查看玩法')}
       ${roomPill(room)}
@@ -190,6 +195,7 @@ function lobbyHeader(room) {
   return `<header class="site-head">
     ${logoMarkup(false)}
     <div class="game-tools">
+      ${spectatorTag(room)}
       ${soundButton()}
       ${iconButton('open-how', 'help', '查看玩法')}
       ${roomPill(room)}
@@ -208,6 +214,8 @@ function bootMarkup() {
 
 function homeMarkup() {
   const isJoin = S.tab === 'join';
+  const isWatch = S.tab === 'watch';
+  const needsCode = isJoin || isWatch;
   return `<div class="app-frame page-home">
     ${homeHeader()}
     <main class="home-main" id="main">
@@ -236,18 +244,19 @@ function homeMarkup() {
             <p class="card-kicker">START / JOIN A ROOM</p>
             <h2 id="entry-title">现在，和朋友对个频。</h2>
 
-            <div class="segmented" role="tablist" aria-label="进入房间的方式">
-              <button type="button" role="tab" data-action="switch-tab" data-tab="create" aria-selected="${!isJoin}" aria-controls="entry-form">开新房间</button>
+            <div class="segmented segmented-3" role="tablist" aria-label="进入房间的方式">
+              <button type="button" role="tab" data-action="switch-tab" data-tab="create" aria-selected="${!isJoin && !isWatch}" aria-controls="entry-form">开新房间</button>
               <button type="button" role="tab" data-action="switch-tab" data-tab="join" aria-selected="${isJoin}" aria-controls="entry-form">加入房间</button>
+              <button type="button" role="tab" data-action="switch-tab" data-tab="watch" aria-selected="${isWatch}" aria-controls="entry-form">观战</button>
             </div>
 
             <form id="entry-form" novalidate>
               <div class="field">
-                <label class="field-label" for="player-name"><span>你的称呼</span><span>最多 12 字</span></label>
-                <input class="text-input" id="player-name" name="name" type="text" maxlength="12" autocomplete="nickname" placeholder="给自己起个名字" value="${esc(S.name)}" ${S.busy ? 'disabled' : ''} />
+                <label class="field-label" for="player-name"><span>${isWatch ? '观战称呼' : '你的称呼'}</span><span>${isWatch ? '可留空' : '最多 12 字'}</span></label>
+                <input class="text-input" id="player-name" name="name" type="text" maxlength="12" autocomplete="nickname" placeholder="${isWatch ? '不填就是「观众」' : '给自己起个名字'}" value="${esc(S.name)}" ${S.busy ? 'disabled' : ''} />
               </div>
               ${
-                isJoin
+                needsCode
                   ? `<div class="field">
                       <label class="field-label" for="join-code"><span>房间码</span><span>四位字母或数字</span></label>
                       <input class="text-input code-input" id="join-code" name="code" type="text" inputmode="text" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD" value="${esc(S.joinCode)}" ${S.busy ? 'disabled' : ''} />
@@ -256,12 +265,12 @@ function homeMarkup() {
               }
               ${S.formError ? `<p class="form-error" role="alert">${esc(S.formError)}</p>` : ''}
               <button class="btn btn-primary" type="submit" ${S.busy ? 'disabled' : ''}>
-                ${S.busy ? '正在连接…' : isJoin ? '加入房间' : '开一个房间'}
+                ${S.busy ? '正在连接…' : isJoin ? '加入房间' : isWatch ? '进入观战' : '开一个房间'}
                 ${S.busy ? '' : ICONS.arrow}
               </button>
             </form>
 
-            <p class="entry-foot"><span>2–4 人</span><i>·</i><span>无需注册</span><i>·</i><span>草稿自动同步</span></p>
+            <p class="entry-foot"><span>2–4 人</span><i>·</i><span>观战不限</span><i>·</i><span>无需注册</span></p>
           </div>
         </section>
       </div>
@@ -328,6 +337,26 @@ function emptySeat(index, playerCount) {
   </article>`;
 }
 
+function spectatorStrip(room) {
+  const spectators = room.spectators || [];
+  return `<div class="spectator-strip">
+    <div class="spectator-strip-head">
+      <span class="spectator-label"><i class="spectator-eye" aria-hidden="true"></i>观战席</span>
+      <span class="spectator-count">${spectators.length} / ${room.maxSpectators}</span>
+    </div>
+    ${
+      spectators.length
+        ? `<div class="spectator-chips">${spectators
+            .map(
+              (spectator) =>
+                `<span class="spectator-chip${spectator.isYou ? ' is-you' : ''}"><i class="status-dot ${spectator.connected ? '' : 'offline'}"></i>${esc(spectator.name)}${spectator.isYou ? ' · 你' : ''}</span>`,
+            )
+            .join('')}</div>`
+        : `<p class="spectator-empty">还没有人观战，复制观战链接给不上场的朋友。</p>`
+    }
+  </div>`;
+}
+
 function durationControls(room) {
   const isHost = room.viewer.isHost;
   if (!isHost) {
@@ -342,7 +371,7 @@ function durationControls(room) {
 }
 
 function inviteLinks() {
-  if (!S.room) return { primary: '', local: '', lan: '', public: '' };
+  if (!S.room) return { primary: '', local: '', lan: '', public: '', watch: '' };
   const code = encodeURIComponent(S.room.code);
   const local = roomUrl(S.room.code);
   const lanAddress = S.info?.lanUrls?.[0];
@@ -360,28 +389,46 @@ function inviteLinks() {
   } else if (lan && onLoopback) {
     primary = lan;
   }
-  return { primary, local, lan, public: publicLink };
+  return {
+    primary,
+    local,
+    lan,
+    public: publicLink,
+    watch: primary ? `${primary}&watch=1` : '',
+  };
 }
 
 function lobbyMarkup(room) {
   const count = room.players.length;
   const full = count >= room.maxPlayers;
   const canStart = room.canStart;
+  const isSpectator = Boolean(room.viewer.isSpectator);
   const seats = room.players.map(playerSeat).join('');
   const emptyCount = Math.max(0, room.maxPlayers - count);
   const empties = Array.from({ length: emptyCount }, (_, index) => emptySeat(index, count)).join('');
   const links = inviteLinks();
   const isPublic = Boolean(links.public);
   const isLanPrimary = !isPublic && links.primary === links.lan && links.lan;
+  const title = isSpectator
+    ? '观战席，<span>已就座。</span>'
+    : full
+      ? '人齐了，<br class="mobile-break" /><span>开局吧。</span>'
+      : '等朋友<span>入座。</span>';
 
   return `<div class="app-frame page-lobby">
     ${lobbyHeader(room)}
     <main class="lobby-main" id="main">
       <div class="lobby-head">
         <div>
-          <p class="eyebrow">LOBBY / 等待集合</p>
-          <h1 class="lobby-title">${full ? '人齐了，<br class="mobile-break" /><span>开局吧。</span>' : '等朋友<span>入座。</span>'}</h1>
-          <p class="lobby-sub">${full ? '四个人都到齐了。房主按下开始，这一局就正式调频。' : '满 2 人即可开始，最多 4 人。把房间码发给朋友，等人齐了再开局。'}</p>
+          <p class="eyebrow">${isSpectator ? 'SPECTATOR / 观战中' : 'LOBBY / 等待集合'}</p>
+          <h1 class="lobby-title">${title}</h1>
+          <p class="lobby-sub">${
+            isSpectator
+              ? '你在观战。玩家到齐后由房主开局；提交阶段只能看到谁已提交，揭晓时才能看到所有人的词。'
+              : full
+                ? '四个人都到齐了。房主按下开始，这一局就正式调频。'
+                : '满 2 人即可开始，最多 4 人。把房间码发给朋友，等人齐了再开局。'
+          }</p>
         </div>
         <div class="lobby-code" aria-label="房间码 ${esc(room.code)}">
           <small>ROOM CODE</small>
@@ -396,6 +443,7 @@ function lobbyMarkup(room) {
             <span class="panel-head-meta">${count} / ${room.maxPlayers} SEATED</span>
           </div>
           <div class="seat-grid">${seats}${empties}</div>
+          ${spectatorStrip(room)}
 
           <div class="settings-block">
             <div class="settings-row">
@@ -406,12 +454,22 @@ function lobbyMarkup(room) {
 
           <div class="start-row">
             ${
-              room.viewer.isHost
-                ? `<button type="button" class="btn btn-primary btn-block" data-action="start-game" ${!canStart || S.startBusy ? 'disabled' : ''}>${S.startBusy ? '正在开局…' : canStart ? '开始游戏' : count < 2 ? '还差一位朋友' : '人满才能开始'}${!S.startBusy ? ICONS.arrow : ''}</button>`
-                : `<button type="button" class="btn btn-soft btn-block" disabled>${count < 2 ? '等朋友加入' : '等房主开始'}</button>`
+              isSpectator
+                ? `<button type="button" class="btn btn-soft btn-block" disabled>你正在观战 · 等房主开局</button>`
+                : room.viewer.isHost
+                  ? `<button type="button" class="btn btn-primary btn-block" data-action="start-game" ${!canStart || S.startBusy ? 'disabled' : ''}>${S.startBusy ? '正在开局…' : canStart ? '开始游戏' : count < 2 ? '还差一位朋友' : '人满才能开始'}${!S.startBusy ? ICONS.arrow : ''}</button>`
+                  : `<button type="button" class="btn btn-soft btn-block" disabled>${count < 2 ? '等朋友加入' : '等房主开始'}</button>`
             }
-            <p class="start-hint">${count < 2 ? '至少需要 2 人。复制邀请链接，再叫一位朋友。' : room.viewer.isHost ? '开局后不能加入新玩家。先确认人都到齐，再调频。' : '房主准备好后就会开局，先把手指放在词上。'}</p>
-            <p class="start-hint"><button type="button" class="text-link" data-action="leave-lobby">退出这个房间</button></p>
+            <p class="start-hint">${
+              isSpectator
+                ? '玩家开局后会自动进入观战画面，你不需要做任何操作。'
+                : count < 2
+                  ? '至少需要 2 人。复制邀请链接，再叫一位朋友。'
+                  : room.viewer.isHost
+                    ? '开局后不能加入新玩家。先确认人都到齐，再调频。'
+                    : '房主准备好后就会开局，先把手指放在词上。'
+            }</p>
+            <p class="start-hint"><button type="button" class="text-link" data-action="leave-lobby">${isSpectator ? '退出观战' : '退出这个房间'}</button></p>
           </div>
         </section>
 
@@ -422,10 +480,12 @@ function lobbyMarkup(room) {
             <div class="room-code-display" aria-label="房间码 ${esc(room.code)}">${Array.from(room.code)
               .map((character) => `<span>${esc(character)}</span>`)
               .join('')}</div>
-            <div class="invite-actions">
-              <button type="button" class="btn btn-light" data-action="copy-code">复制房间码</button>
-              <button type="button" class="btn btn-outline-light" data-action="copy-invite">复制邀请链接</button>
+            <div class="invite-actions invite-actions-3">
+              <button type="button" class="btn btn-light" data-action="copy-code">房间码</button>
+              <button type="button" class="btn btn-outline-light" data-action="copy-invite">邀请链接</button>
+              <button type="button" class="btn btn-outline-light" data-action="copy-watch">观战链接</button>
             </div>
+            <p class="invite-watch-note">观战不占玩家名额，可随时加入；只能看，不能写词或点继续。</p>
             <div class="invite-url-box">
               <div class="invite-url-label"><span>${isPublic ? '公网邀请链接' : isLanPrimary ? '同一 WI-FI 邀请链接' : '邀请链接'}</span><span>${isPublic ? 'PUBLIC' : 'LINK'}</span></div>
               <span class="invite-url" title="${esc(links.primary)}">${esc(links.primary)}</span>
@@ -516,8 +576,18 @@ function syncLabel() {
   );
 }
 
+function spectatorView(room) {
+  return `<div class="spectator-view">
+    <span class="spectator-view-eye" aria-hidden="true"><i></i></span>
+    <h2>你在观战</h2>
+    <p>${room.submittedCount} / ${room.players.length} 人已提交。提交的词会在揭晓时公开，现在只能看到谁写完了。</p>
+    <div class="spectator-view-note">不写词 · 不点继续 · 揭晓时可看全员答案</div>
+  </div>`;
+}
+
 function writingMarkup(room) {
   const viewer = room.viewer;
+  const isSpectator = Boolean(viewer.isSpectator);
   const isFirst = room.round <= 1;
   const submitted = viewer.submitted;
   const max = room.maxWordLength;
@@ -534,9 +604,15 @@ function writingMarkup(room) {
     <main class="play-main" id="main">
       <div class="play-top">
         <div>
-          <p class="eyebrow">ROUND ${pad2(room.round)} / ${isFirst ? '第一次碰撞' : '继续联想'}</p>
-          <h1 class="play-title">${isFirst ? '写下<span>一个词。</span>' : '再靠近<span>一点。</span>'}</h1>
-          <p class="play-sub">${isFirst ? '不用解释，凭直觉写。猜一个你们会同时想到的词。' : '上一轮已经摊牌。从这些词出发，找一个你们会共同想到的新词。'}</p>
+          <p class="eyebrow">ROUND ${pad2(room.round)} / ${isSpectator ? '观战席' : isFirst ? '第一次碰撞' : '继续联想'}</p>
+          <h1 class="play-title">${isSpectator ? '看他们<span>想到一起。</span>' : isFirst ? '写下<span>一个词。</span>' : '再靠近<span>一点。</span>'}</h1>
+          <p class="play-sub">${
+            isSpectator
+              ? '你在观战。提交阶段看不到大家的词，倒计时结束或全员提交后会一起揭晓。'
+              : isFirst
+                ? '不用解释，凭直觉写。猜一个你们会同时想到的词。'
+                : '上一轮已经摊牌。从这些词出发，找一个你们会共同想到的新词。'
+          }</p>
         </div>
         <div class="timer-block">
           <div class="timer-meta"><span>TIME LEFT</span><strong>每轮 ${room.durationSec} 秒</strong></div>
@@ -549,32 +625,34 @@ function writingMarkup(room) {
       ${previousStrip(room)}
 
       <div class="playing-grid">
-        <section class="word-panel" aria-labelledby="composer-label">
+        <section class="word-panel${isSpectator ? ' word-panel-spectator' : ''}" aria-labelledby="composer-label">
           <div class="composer-top">
-            <p class="composer-label" id="composer-label">YOUR WORD / 你的词</p>
-            ${!submitted ? `<span class="sync-state ${S.save} js-sync-state" title="超时揭晓时将使用最后一次同步成功的草稿">${syncLabel()}</span>` : ''}
+            <p class="composer-label" id="composer-label">${isSpectator ? 'SPECTATOR / 观战中' : 'YOUR WORD / 你的词'}</p>
+            ${!isSpectator && !submitted ? `<span class="sync-state ${S.save} js-sync-state" title="超时揭晓时将使用最后一次同步成功的草稿">${syncLabel()}</span>` : ''}
           </div>
 
           ${
-            submitted
-              ? `<div class="submitted-view">
-                  <div class="submitted-word">${esc(viewer.word || S.draft || '（空）')}</div>
-                  <div class="submitted-stamp">已提交 · 锁定</div>
-                  <p class="submitted-help">提交后不能修改。等其他人提交，或等倒计时结束一起揭晓。</p>
-                </div>`
-              : `<div class="composer-body">
-                  <div class="word-line">
-                    <input class="word-input" id="word-input" name="word" type="text" maxlength="${max}" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="一个词" aria-describedby="word-hint" value="${esc(S.draft)}" />
-                    <span class="word-count" id="word-count">${runes}/${max}</span>
-                  </div>
-                  <div class="composer-caption">
-                    <p class="composer-hint" id="word-hint">${isFirst ? '想想你们最容易同时想到的那个词。' : '从上一轮的词继续联想，但不要直接抄。'}</p>
-                  </div>
-                  <div class="composer-actions">
-                    <button type="button" class="btn btn-primary" data-action="submit-word" ${!S.draft.trim() || S.submitBusy ? 'disabled' : ''}>${S.submitBusy ? '提交中…' : '提交这个词'}${!S.submitBusy ? ICONS.arrow : ''}</button>
-                    <span class="submit-note">提交后不能修改<br />超时使用已同步草稿</span>
-                  </div>
-                </div>`
+            isSpectator
+              ? spectatorView(room)
+              : submitted
+                ? `<div class="submitted-view">
+                    <div class="submitted-word">${esc(viewer.word || S.draft || '（空）')}</div>
+                    <div class="submitted-stamp">已提交 · 锁定</div>
+                    <p class="submitted-help">提交后不能修改。等其他人提交，或等倒计时结束一起揭晓。</p>
+                  </div>`
+                : `<div class="composer-body">
+                    <div class="word-line">
+                      <input class="word-input" id="word-input" name="word" type="text" maxlength="${max}" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="一个词" aria-describedby="word-hint" value="${esc(S.draft)}" />
+                      <span class="word-count" id="word-count">${runes}/${max}</span>
+                    </div>
+                    <div class="composer-caption">
+                      <p class="composer-hint" id="word-hint">${isFirst ? '想想你们最容易同时想到的那个词。' : '从上一轮的词继续联想，但不要直接抄。'}</p>
+                    </div>
+                    <div class="composer-actions">
+                      <button type="button" class="btn btn-primary" data-action="submit-word" ${!S.draft.trim() || S.submitBusy ? 'disabled' : ''}>${S.submitBusy ? '提交中…' : '提交这个词'}${!S.submitBusy ? ICONS.arrow : ''}</button>
+                      <span class="submit-note">提交后不能修改<br />超时使用已同步草稿</span>
+                    </div>
+                  </div>`
           }
 
           <div class="word-progress">
@@ -590,9 +668,13 @@ function writingMarkup(room) {
           <section class="side-card" aria-labelledby="players-title">
             <div class="side-card-head"><h2 id="players-title">玩家</h2><span>${room.players.length} / ${room.maxPlayers}</span></div>
             <ul class="player-list">${playerRows(room)}</ul>
+            ${spectatorStrip(room)}
             <div class="rule-note" style="margin-top:15px">
-              <b>倒计时结束怎么办？</b>
-              <p>没用提交也没关系，系统会用你<strong>最后一次同步成功的草稿</strong>揭晓。空词不算成功。</p>
+              ${
+                isSpectator
+                  ? '<b>你正在观战</b><p>不能写词、不能点继续。揭晓时可以看到所有玩家提交的词。</p>'
+                  : '<b>倒计时结束怎么办？</b><p>没用提交也没关系，系统会用你<strong>最后一次同步成功的草稿</strong>揭晓。空词不算成功。</p>'
+              }
             </div>
           </section>
 
@@ -619,7 +701,34 @@ function continueBar(room) {
   const remaining = Math.max(0, room.ready.needed - room.ready.count);
   const allReady = room.ready.all;
   const won = room.phase === 'won';
+  const isSpectator = Boolean(room.viewer.isSpectator);
   const viewerReady = room.viewer.continued;
+  if (isSpectator) {
+    const title = allReady
+      ? '全员已继续'
+      : remaining === active.length
+        ? '等玩家看完'
+        : `还差 ${remaining} 人继续`;
+    const sub = allReady
+      ? '正在进入下一轮…'
+      : won
+        ? '你在观战，等玩家点「再来一局」。'
+        : '你在观战，玩家全部点继续后自动进入下一轮。';
+    return `<section class="continue-bar spectator-continue" aria-label="观战继续状态">
+      <div class="ready-cluster">
+        <div class="ready-avatars" aria-hidden="true">
+          ${room.players
+            .map(
+              (player) =>
+                `<span class="avatar avatar-sm${player.continued ? ' ready' : ''}" style="--soft:${esc(player.softColor)}" title="${esc(player.name)}${player.continued ? ' · 已继续' : ' · 还在看'}">${esc(firstRune(player.name))}</span>`,
+            )
+            .join('')}
+        </div>
+        <div class="ready-copy"><strong>${title}</strong><span>${sub}</span></div>
+      </div>
+      <span class="spectator-continue-badge">观战席</span>
+    </section>`;
+  }
   let title = allReady ? '全员已继续' : `还差 ${remaining} 人继续`;
   if (!canAdvance) title = '等待其他人上线';
   let sub = allReady ? '正在进入下一轮…' : '全员点击后，下一轮自动开始。掉线玩家不计入。';
@@ -682,6 +791,7 @@ function chainMarkup(room) {
 function revealMarkup(room) {
   const result = room.result;
   if (!result) return lobbyMarkup(room);
+  const isSpectator = Boolean(room.viewer.isSpectator);
   const allSame = result.allSame;
   const entries = result.entries;
   const emptyCount = entries.filter((entry) => !entry.word).length;
@@ -738,7 +848,15 @@ function revealMarkup(room) {
       ${continueBar(room)}
 
       <div class="reveal-tip-row">
-        <p><strong>${allSame ? '这一局结束。' : '没有标准答案。'}</strong>${allSame ? '点击「再来一局」，保留原班人马重新调频。' : '点击「继续下一轮」，把这一轮留在词链里，再从这些词继续想。'}</p>
+        <p><strong>${allSame ? '这一局结束。' : '没有标准答案。'}</strong>${
+          isSpectator
+            ? allSame
+              ? '玩家点「再来一局」后会保留原班人马重新调频，你继续留在观战席。'
+              : '玩家全员继续后，下一轮自动开始，你继续留在观战席。'
+            : allSame
+              ? '点击「再来一局」，保留原班人马重新调频。'
+              : '点击「继续下一轮」，把这一轮留在词链里，再从这些词继续想。'
+        }</p>
         <button type="button" class="text-link" data-action="open-how">查看完整规则</button>
       </div>
 
@@ -831,9 +949,10 @@ function openHow() {
 
 function pageTitle() {
   if (!S.room) return '同频 · 想到一起，才算数';
-  if (S.room.phase === 'lobby') return `房间 ${S.room.code} · 同频`;
-  if (S.room.phase === 'writing') return `第 ${S.room.round} 轮 · 同频`;
-  return `第 ${S.room.round} 轮揭晓 · 同频`;
+  const prefix = S.room.viewer?.isSpectator ? '观战 · ' : '';
+  if (S.room.phase === 'lobby') return `${prefix}房间 ${S.room.code} · 同频`;
+  if (S.room.phase === 'writing') return `${prefix}第 ${S.room.round} 轮 · 同频`;
+  return `${prefix}第 ${S.room.round} 轮揭晓 · 同频`;
 }
 
 function render() {
@@ -929,6 +1048,7 @@ function credentialsBody(extra = {}) {
     code: S.creds?.code || '',
     playerId: S.creds?.playerId || '',
     token: S.creds?.token || '',
+    role: S.creds?.role || 'player',
     ...extra,
   };
 }
@@ -941,6 +1061,7 @@ async function refreshState() {
         code: S.creds.code,
         playerId: S.creds.playerId,
         token: S.creds.token,
+        role: S.creds.role || 'player',
       });
       const response = await fetch(`/api/state?${query.toString()}`, {
         headers: { Accept: 'application/json' },
@@ -980,7 +1101,10 @@ function loadSession(code) {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed.playerId || !parsed.token) return null;
-    return parsed;
+    return {
+      ...parsed,
+      role: parsed.role === 'spectator' ? 'spectator' : 'player',
+    };
   } catch {
     return null;
   }
@@ -993,6 +1117,7 @@ function saveSession(data) {
       JSON.stringify({
         playerId: data.playerId,
         token: data.token,
+        role: data.role === 'spectator' ? 'spectator' : 'player',
         name: S.name,
         savedAt: Date.now(),
       }),
@@ -1024,10 +1149,12 @@ function loadPreferences() {
 /* ----------------------------- Room flow ----------------------------- */
 
 function adoptCredentials(data) {
+  const role = data.role === 'spectator' ? 'spectator' : 'player';
   S.creds = {
     code: data.code,
     playerId: data.playerId,
     token: data.token,
+    role,
   };
   S.room = data.state;
   S.lastStateSignature = null;
@@ -1038,31 +1165,44 @@ function adoptCredentials(data) {
   S.expiredRequested = false;
   S.clockOffset = data.state.serverNow - Date.now();
   S.modal = null;
-  const player = data.state.players.find((entry) => entry.isYou);
-  if (player) S.name = player.name;
+  if (role === 'spectator') {
+    const spectator = data.state.spectators.find((entry) => entry.isYou);
+    if (spectator) S.name = spectator.name;
+  } else {
+    const player = data.state.players.find((entry) => entry.isYou);
+    if (player) S.name = player.name;
+  }
   S.draft = data.state.viewer?.draft || '';
   lastSavedDraft = S.draft;
   S.save = 'idle';
-  S.focusWord = data.state.phase === 'writing' && !data.state.viewer?.submitted;
-  saveSession(data);
-  const nextUrl = `/?room=${encodeURIComponent(data.code)}`;
+  S.focusWord =
+    role === 'player' &&
+    data.state.phase === 'writing' &&
+    !data.state.viewer?.submitted;
+  saveSession({ ...data, role });
+  const nextUrl =
+    role === 'spectator'
+      ? `/?room=${encodeURIComponent(data.code)}&watch=1`
+      : `/?room=${encodeURIComponent(data.code)}`;
   if (location.pathname + location.search !== nextUrl) {
     history.replaceState(null, '', nextUrl);
   }
   closeStream();
   connectStream();
   render();
-  if (data.state.phase === 'writing') {
+  if (role === 'player' && data.state.phase === 'writing') {
     requestAnimationFrame(() => $('#word-input')?.focus({ preventScroll: true }));
   }
 }
 
 async function handleEntry() {
   if (S.busy) return;
-  const name = $('#player-name')?.value.trim() || '';
+  const rawName = $('#player-name')?.value.trim() || '';
   const isJoin = S.tab === 'join';
+  const isWatch = S.tab === 'watch';
+  const name = rawName || (isWatch ? '观众' : '');
   const code = normalizeCode($('#join-code')?.value || S.joinCode);
-  S.name = name;
+  S.name = rawName;
   S.joinCode = code;
   if (!name) {
     S.formError = '先给自己起个名字吧。';
@@ -1070,7 +1210,7 @@ async function handleEntry() {
     render();
     return;
   }
-  if (isJoin && code.length !== 4) {
+  if ((isJoin || isWatch) && code.length !== 4) {
     S.formError = '输入四位房间码，再试一次。';
     S.focusField = 'join-code';
     render();
@@ -1080,16 +1220,18 @@ async function handleEntry() {
   S.busy = true;
   render();
   try {
-    const data = isJoin
-      ? await api('/api/rooms/join', { code, name })
-      : await api('/api/rooms', { name });
+    const data = isWatch
+      ? await api('/api/rooms/spectate', { code, name })
+      : isJoin
+        ? await api('/api/rooms/join', { code, name })
+        : await api('/api/rooms', { name });
     S.busy = false;
     adoptCredentials(data);
   } catch (error) {
     S.busy = false;
     S.formError = error.message;
     render();
-    S.focusField = isJoin ? 'join-code' : 'player-name';
+    S.focusField = isJoin || isWatch ? 'join-code' : 'player-name';
     render();
   }
 }
@@ -1122,7 +1264,14 @@ async function startGame() {
 
 async function submitWord() {
   if (S.submitBusy) return;
-  if (!S.room || S.room.phase !== 'writing' || S.room.viewer.submitted) return;
+  if (
+    !S.room ||
+    S.room.phase !== 'writing' ||
+    S.room.viewer.isSpectator ||
+    S.room.viewer.submitted
+  ) {
+    return;
+  }
   const word = S.draft.trim();
   if (!word) {
     showToast('写一个词再提交。');
@@ -1154,6 +1303,7 @@ async function submitWord() {
 
 async function continueRound() {
   if (!S.room || S.continueBusy || S.room.viewer.continued) return;
+  if (S.room.viewer.isSpectator) return;
   if (S.room.phase !== 'reveal' && S.room.phase !== 'won') return;
   if (S.room.players.filter((player) => player.connected).length < 2) return;
   S.continueBusy = true;
@@ -1180,12 +1330,19 @@ async function continueRound() {
 }
 
 async function leaveLobby() {
-  if (!S.room || S.room.phase !== 'lobby') return;
-  const confirmed = window.confirm('退出这个房间？你的座位会空出来。');
+  if (!S.room) return;
+  const isSpectator = Boolean(S.room.viewer.isSpectator);
+  if (!isSpectator && S.room.phase !== 'lobby') return;
+  const confirmed = window.confirm(
+    isSpectator ? '退出观战席？' : '退出这个房间？你的座位会空出来。',
+  );
   if (!confirmed) return;
   const code = S.room.code;
   try {
-    await api('/api/leave', credentialsBody());
+    await api(
+      isSpectator ? '/api/spectate/leave' : '/api/leave',
+      credentialsBody(),
+    );
     goHome(code);
   } catch (error) {
     showToast(error.message);
@@ -1291,7 +1448,7 @@ function applyState(next) {
     lastSavedDraft = S.draft;
     S.save = 'idle';
     S.expiredRequested = false;
-    S.focusWord = true;
+    S.focusWord = !next.viewer.isSpectator;
     S.submitBusy = false;
   }
 
@@ -1325,7 +1482,7 @@ function applyState(next) {
 
   if (previous && (phaseChanged || roundChanged)) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (next.phase === 'writing') {
+    if (next.phase === 'writing' && !next.viewer.isSpectator) {
       requestAnimationFrame(() => $('#word-input')?.focus({ preventScroll: true }));
     }
   }
@@ -1334,7 +1491,12 @@ function applyState(next) {
 /* ----------------------------- Draft sync ----------------------------- */
 
 function canSaveDraft() {
-  return Boolean(S.creds && S.room?.phase === 'writing' && !S.room.viewer.submitted);
+  return Boolean(
+    S.creds &&
+      S.room?.phase === 'writing' &&
+      !S.room.viewer.isSpectator &&
+      !S.room.viewer.submitted,
+  );
 }
 
 function updateSaveUI() {
@@ -1480,6 +1642,7 @@ function connectStream() {
     code: S.creds.code,
     playerId: S.creds.playerId,
     token: S.creds.token,
+    role: S.creds.role || 'player',
   });
   const source = new EventSource(`/api/events?${query.toString()}`);
   eventSource = source;
@@ -1540,7 +1703,7 @@ function tick() {
 
   if (S.lastTitleSecond !== seconds) {
     S.lastTitleSecond = seconds;
-    document.title = `${seconds} 秒 · 第 ${S.room.round} 轮 · 同频`;
+    document.title = `${S.room.viewer?.isSpectator ? '观战 · ' : ''}${seconds} 秒 · 第 ${S.room.round} 轮 · 同频`;
   }
 
   if (remaining <= 0 && !S.expiredRequested) {
@@ -1729,11 +1892,12 @@ function onClick(event) {
     case 'switch-tab': {
       event.preventDefault();
       syncFormValues();
-      S.tab = target.dataset.tab === 'join' ? 'join' : 'create';
+      const tab = target.dataset.tab;
+      S.tab = tab === 'join' || tab === 'watch' ? tab : 'create';
       S.formError = '';
       render();
       requestAnimationFrame(() => {
-        const id = S.tab === 'join' ? 'join-code' : 'player-name';
+        const id = S.tab === 'create' ? 'player-name' : 'join-code';
         document.getElementById(id)?.focus({ preventScroll: true });
       });
       break;
@@ -1746,6 +1910,12 @@ function onClick(event) {
       event.preventDefault();
       const links = inviteLinks();
       copyText(links.primary, '邀请链接已复制，发给朋友吧');
+      break;
+    }
+    case 'copy-watch': {
+      event.preventDefault();
+      const links = inviteLinks();
+      copyText(links.watch, '观战链接已复制，不占玩家名额');
       break;
     }
     case 'toggle-sound':
@@ -1874,9 +2044,10 @@ async function init() {
 
   const params = new URLSearchParams(location.search);
   const code = normalizeCode(params.get('room'));
+  const watchLink = params.get('watch') === '1';
   if (code) {
     S.joinCode = code;
-    S.tab = 'join';
+    S.tab = watchLink ? 'watch' : 'join';
     const saved = loadSession(code);
     if (saved) {
       S.booting = true;
@@ -1886,12 +2057,13 @@ async function init() {
           code,
           playerId: saved.playerId,
           token: saved.token,
+          role: saved.role,
         });
         adoptCredentials(data);
       } catch (error) {
         clearSession(code);
         S.booting = false;
-        S.tab = 'join';
+        S.tab = watchLink ? 'watch' : 'join';
         S.joinCode = code;
         S.formError =
           error.status === 404

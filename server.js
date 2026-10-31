@@ -118,21 +118,21 @@ function createApp(options = {}) {
       process.env.PUBLIC_URL ||
       process.env.RENDER_EXTERNAL_URL,
   );
-  // code -> playerId -> Set<ServerResponse>
+  // code -> memberId -> Set<ServerResponse>
   const streams = new Map();
-  // code -> playerId -> number of open SSE connections
+  // code -> memberId -> number of open SSE connections
   const connectionCounts = new Map();
 
-  function streamSet(code, playerId) {
-    let byPlayer = streams.get(code);
-    if (!byPlayer) {
-      byPlayer = new Map();
-      streams.set(code, byPlayer);
+  function streamSet(code, memberId) {
+    let byMember = streams.get(code);
+    if (!byMember) {
+      byMember = new Map();
+      streams.set(code, byMember);
     }
-    let set = byPlayer.get(playerId);
+    let set = byMember.get(memberId);
     if (!set) {
       set = new Set();
-      byPlayer.set(playerId, set);
+      byMember.set(memberId, set);
     }
     return set;
   }
@@ -152,14 +152,18 @@ function createApp(options = {}) {
   }
 
   function broadcast(room) {
-    const byPlayer = streams.get(room.code);
-    if (!byPlayer) return;
-    for (const player of room.players) {
-      const set = byPlayer.get(player.id);
+    const byMember = streams.get(room.code);
+    if (!byMember) return;
+    const members = [
+      ...room.players.map((player) => ({ member: player, role: 'player' })),
+      ...room.spectators.map((spectator) => ({ member: spectator, role: 'spectator' })),
+    ];
+    for (const { member, role } of members) {
+      const set = byMember.get(member.id);
       if (!set || !set.size) continue;
       let state;
       try {
-        state = game.view(room, player.id);
+        state = game.view(room, member.id, role);
       } catch {
         continue;
       }
@@ -173,8 +177,8 @@ function createApp(options = {}) {
     }
   }
 
-  function sendState(res, room, playerId) {
-    sendJson(res, 200, { state: game.view(room, playerId) });
+  function sendState(res, room, memberId, role = 'player') {
+    sendJson(res, 200, { state: game.view(room, memberId, role) });
   }
 
   function maybeExpire(code) {
@@ -221,17 +225,18 @@ function createApp(options = {}) {
       code: url.searchParams.get('code') || '',
       playerId: url.searchParams.get('playerId') || '',
       token: url.searchParams.get('token') || '',
+      role: url.searchParams.get('role') === 'spectator' ? 'spectator' : 'player',
     };
   }
 
   function openStream(req, res, url) {
-    const { code, playerId, token } = credentialsFrom(url);
+    const { code, playerId, token, role } = credentialsFrom(url);
     let room;
-    let player;
+    let member;
     try {
-      const auth = game.authenticate(code, playerId, token);
+      const auth = game.authenticate(code, playerId, token, role);
       room = auth.room;
-      player = auth.player;
+      member = role === 'spectator' ? auth.spectator : auth.player;
     } catch (error) {
       sendJson(res, error.status || 401, { error: error.message });
       return;
@@ -245,18 +250,18 @@ function createApp(options = {}) {
     });
 
     res.write('retry: 2200\n\n');
-    const set = streamSet(room.code, player.id);
+    const set = streamSet(room.code, member.id);
     set.add(res);
 
     const counts = countMap(room.code);
-    const previousCount = counts.get(player.id) || 0;
-    counts.set(player.id, previousCount + 1);
+    const previousCount = counts.get(member.id) || 0;
+    counts.set(member.id, previousCount + 1);
     if (previousCount === 0) {
-      game.setConnected(room.code, player.id, true);
+      game.setConnected(room.code, member.id, true, role);
     }
 
     writeEvent(res, 'hello', { serverNow: Date.now(), code: room.code });
-    writeEvent(res, 'state', game.view(room, player.id));
+    writeEvent(res, 'state', game.view(room, member.id, role));
     broadcast(room);
 
     let cleaned = false;
@@ -265,16 +270,16 @@ function createApp(options = {}) {
       cleaned = true;
       set.delete(res);
       if (!set.size) {
-        streams.get(room.code)?.delete(player.id);
+        streams.get(room.code)?.delete(member.id);
       }
-      const current = counts.get(player.id) || 0;
+      const current = counts.get(member.id) || 0;
       const next = Math.max(0, current - 1);
       if (next === 0) {
-        counts.delete(player.id);
-        const outcome = game.setConnected(room.code, player.id, false);
+        counts.delete(member.id);
+        const outcome = game.setConnected(room.code, member.id, false, role);
         if (outcome?.room) broadcast(outcome.room);
       } else {
-        counts.set(player.id, next);
+        counts.set(member.id, next);
       }
     };
 
@@ -338,11 +343,11 @@ function createApp(options = {}) {
     }
 
     if (req.method === 'GET' && url.pathname === '/api/state') {
-      const { code, playerId, token } = credentialsFrom(url);
+      const { code, playerId, token, role } = credentialsFrom(url);
       try {
         maybeExpire(code);
-        const { room } = game.authenticate(code, playerId, token);
-        sendState(res, room, playerId);
+        const { room } = game.authenticate(code, playerId, token, role);
+        sendState(res, room, playerId, role);
       } catch (error) {
         sendJson(res, error.status || 500, { error: error.message });
       }
@@ -356,7 +361,8 @@ function createApp(options = {}) {
           code: room.code,
           playerId: player.id,
           token: player.token,
-          state: game.view(room, player.id),
+          role: 'player',
+          state: game.view(room, player.id, 'player'),
         };
       });
       return;
@@ -369,7 +375,25 @@ function createApp(options = {}) {
           code: room.code,
           playerId: player.id,
           token: player.token,
-          state: game.view(room, player.id),
+          role: 'player',
+          state: game.view(room, player.id, 'player'),
+        };
+        broadcast(room);
+        return entry;
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/rooms/spectate') {
+      await handleAction(req, res, async (body) => {
+        const { room, spectator } = game.addSpectator(body.code, body.name);
+        const entry = {
+          code: room.code,
+          playerId: spectator.id,
+          spectatorId: spectator.id,
+          token: spectator.token,
+          role: 'spectator',
+          state: game.view(room, spectator.id, 'spectator'),
         };
         broadcast(room);
         return entry;
@@ -379,10 +403,18 @@ function createApp(options = {}) {
 
     if (req.method === 'POST' && url.pathname === '/api/rejoin') {
       await handleAction(req, res, async (body) => {
-        const { room, player } = game.rejoin(body.code, body.playerId, body.token);
-        const state = game.view(room, player.id);
-        broadcast(room);
-        return { code: room.code, playerId: player.id, token: player.token, state };
+        const role = body.role === 'spectator' ? 'spectator' : 'player';
+        const outcome = game.rejoin(body.code, body.playerId, body.token, role);
+        const member = role === 'spectator' ? outcome.spectator : outcome.player;
+        const state = game.view(outcome.room, member.id, role);
+        broadcast(outcome.room);
+        return {
+          code: outcome.room.code,
+          playerId: member.id,
+          token: member.token,
+          role,
+          state,
+        };
       });
       return;
     }
@@ -404,6 +436,15 @@ function createApp(options = {}) {
     if (req.method === 'POST' && url.pathname === '/api/leave') {
       await handleAction(req, res, async (body) => {
         const outcome = game.leaveLobby(body.code, body.playerId, body.token);
+        if (outcome.room) broadcast(outcome.room);
+        return { ok: true, deleted: outcome.deleted };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/spectate/leave') {
+      await handleAction(req, res, async (body) => {
+        const outcome = game.leaveSpectator(body.code, body.playerId, body.token);
         if (outcome.room) broadcast(outcome.room);
         return { ok: true, deleted: outcome.deleted };
       });

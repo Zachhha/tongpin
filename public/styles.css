@@ -494,6 +494,215 @@ a {
   box-shadow: 0 1px 4px rgba(23, 21, 15, 0.13);
 }
 
+.segmented-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.segmented-3 button {
+  font-size: 12.5px;
+  padding: 0 4px;
+}
+
+.spectator-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 25px;
+  padding: 0 9px;
+  border: 1px solid var(--red);
+  border-radius: 999px;
+  background: var(--red-soft);
+  color: #8b2a16;
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.spectator-strip {
+  margin-top: 15px;
+  padding: 12px 13px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 13px;
+  background: rgba(255, 253, 248, 0.38);
+}
+
+.spectator-strip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.spectator-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.spectator-count {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 8px;
+}
+
+.spectator-eye {
+  position: relative;
+  display: inline-block;
+  width: 14px;
+  height: 9px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+
+.spectator-eye::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+}
+
+.spectator-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 86px;
+  overflow-y: auto;
+}
+
+.spectator-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper-3);
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.spectator-chip.is-you {
+  border-color: var(--red);
+  background: var(--red-soft);
+}
+
+.spectator-chip .status-dot {
+  width: 5px;
+  height: 5px;
+}
+
+.spectator-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.spectator-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 12px 30px;
+  text-align: center;
+}
+
+.spectator-view-eye {
+  position: relative;
+  width: 58px;
+  height: 34px;
+  display: block;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  margin-bottom: 18px;
+}
+
+.spectator-view-eye i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--ink);
+  transform: translate(-50%, -50%);
+}
+
+.spectator-view h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 31px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.spectator-view p {
+  max-width: 370px;
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+
+.spectator-view-note {
+  margin-top: 17px;
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+}
+
+.word-panel-spectator::before {
+  content: "WATCHING";
+}
+
+.spectator-continue-badge {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border: 1px solid rgba(251, 247, 238, 0.3);
+  border-radius: 999px;
+  color: rgba(251, 247, 238, 0.76);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+
+.invite-card .invite-actions-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.invite-card .invite-actions-3 .btn {
+  min-width: 0;
+  padding: 0 5px;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.invite-watch-note {
+  position: relative;
+  z-index: 1;
+  margin: 9px 0 0;
+  color: rgba(251, 247, 238, 0.52);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
 .field {
   display: grid;
   gap: 7px;
@@ -3494,5 +3703,49 @@ a {
 
   .confetti-layer {
     display: none;
+  }
+}
+
+@media (max-width: 660px) {
+  .game-head .spectator-tag,
+  .page-lobby .spectator-tag {
+    display: none;
+  }
+
+  .spectator-strip {
+    margin-top: 13px;
+    padding: 10px 11px;
+  }
+
+  .spectator-view {
+    padding: 18px 7px 22px;
+  }
+
+  .spectator-view-eye {
+    width: 48px;
+    height: 29px;
+    margin-bottom: 14px;
+  }
+
+  .spectator-view h2 {
+    font-size: 27px;
+  }
+
+  .spectator-view p {
+    font-size: 10.5px;
+  }
+
+  .spectator-view-note {
+    font-size: 7.5px;
+  }
+
+  .spectator-continue-badge {
+    padding: 6px 9px;
+    font-size: 7px;
+  }
+
+  .invite-card .invite-actions-3 .btn {
+    font-size: 9.5px;
+    padding: 0 3px;
   }
 }

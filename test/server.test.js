@@ -49,8 +49,8 @@ function credentials(code, playerId, token) {
   return { code, playerId, token };
 }
 
-function stateUrl(code, playerId, token) {
-  const query = new URLSearchParams({ code, playerId, token });
+function stateUrl(code, playerId, token, role = 'player') {
+  const query = new URLSearchParams({ code, playerId, token, role });
   return `/api/state?${query.toString()}`;
 }
 
@@ -146,6 +146,48 @@ test('HTTP flow: timeout reveals synced drafts, then everyone continues', async 
   assert.equal(secondContinue.payload.state.phase, 'writing');
   assert.equal(secondContinue.payload.state.round, 2);
   assert.equal(secondContinue.payload.state.lastRound.entries[0].word, '夏天');
+});
+
+test('spectator API: joins without a seat, sees no words until reveal, cannot continue', async (t) => {
+  const { app, post, get } = await startServer();
+  t.after(() => closeServer(app.server));
+
+  const host = (await post('/api/rooms', { name: '观主' })).payload;
+  const guest = (await post('/api/rooms/join', { code: host.code, name: '观客' })).payload;
+  const audience = await post('/api/rooms/spectate', { code: host.code, name: '路人' });
+  assert.equal(audience.status, 200);
+  assert.equal(audience.payload.role, 'spectator');
+  assert.equal(audience.payload.state.viewer.role, 'spectator');
+  assert.equal(audience.payload.state.players.length, 2);
+
+  await post('/api/start', credentials(host.code, host.playerId, host.token));
+  await post('/api/submit', {
+    ...credentials(host.code, host.playerId, host.token),
+    word: '海',
+  });
+
+  const writing = await get(
+    stateUrl(host.code, audience.payload.playerId, audience.payload.token, 'spectator'),
+  );
+  assert.equal(writing.status, 200);
+  assert.equal(writing.payload.state.role, 'spectator');
+  assert.equal(writing.payload.state.players.find((p) => p.name === '观主').word, null);
+
+  await post('/api/submit', {
+    ...credentials(host.code, guest.playerId, guest.token),
+    word: '海',
+  });
+  const revealed = await get(
+    stateUrl(host.code, audience.payload.playerId, audience.payload.token, 'spectator'),
+  );
+  assert.equal(revealed.payload.state.phase, 'won');
+  assert.equal(revealed.payload.state.result.entries.length, 2);
+
+  const unauthorized = await post('/api/continue', {
+    ...credentials(host.code, audience.payload.playerId, audience.payload.token),
+    round: 1,
+  });
+  assert.equal(unauthorized.status, 401);
 });
 
 test('SSE sends room state and later broadcasts a submission', async (t) => {
