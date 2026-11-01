@@ -460,6 +460,29 @@ function createApp(options = {}) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/like') {
+      await handleAction(req, res, async (body) => {
+        const role = body.role === 'spectator' ? 'spectator' : 'player';
+        const outcome = game.likeWord(
+          body.code,
+          body.playerId,
+          body.token,
+          body.round,
+          body.targetPlayerId,
+          role,
+        );
+        broadcast(outcome.room);
+        return {
+          ok: true,
+          liked: outcome.liked,
+          alreadyLiked: outcome.alreadyLiked,
+          count: outcome.count,
+          state: game.view(outcome.room, body.playerId, role),
+        };
+      });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/draft') {
       await handleAction(req, res, async (body) => {
         const { room, player } = game.saveDraft(

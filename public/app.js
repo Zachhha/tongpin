@@ -15,6 +15,8 @@ const FORCE_POLLING =
   location.hostname.endsWith('.onrender.com') ||
   new URLSearchParams(location.search).has('poll');
 
+const AUTO_SUBMIT_DURATIONS = new Set([15, 20]);
+
 const S = {
   booting: true,
   name: '',
@@ -25,6 +27,7 @@ const S = {
   startBusy: false,
   continueBusy: false,
   submitBusy: false,
+  likeBusy: false,
   creds: null,
   room: null,
   info: null,
@@ -455,8 +458,8 @@ function lobbyMarkup(room) {
               ${durationControls(room)}
             </div>
             ${
-              room.durationSec === 20
-                ? `<div class="speed-mode-note">⚡ <strong>20 秒极速模式</strong>：没有提交按钮，倒计时结束自动用已同步草稿揭晓。</div>`
+              AUTO_SUBMIT_DURATIONS.has(room.durationSec)
+                ? `<div class="speed-mode-note">⚡ <strong>${room.durationSec} 秒极速模式</strong>：没有提交按钮，倒计时结束自动用已同步草稿揭晓。</div>`
                 : ''
             }
           </div>
@@ -532,6 +535,17 @@ function lobbyMarkup(room) {
 
 /* ----------------------------- Writing ----------------------------- */
 
+function likeButton(roundNumber, entry, extraClass = '') {
+  if (!entry || !entry.word) return '';
+  const count = Number(entry.likeCount) || 0;
+  const own = S.room?.viewer?.id === entry.playerId && !S.room?.viewer?.isSpectator;
+  if (own) {
+    return `<span class="like-static ${extraClass}" title="不能给自己的词点赞">♥ ${count}</span>`;
+  }
+  const liked = Boolean(entry.liked);
+  return `<button type="button" class="like-btn${liked ? ' liked' : ''} ${extraClass}" data-action="like-word" data-round="${roundNumber}" data-player="${esc(entry.playerId)}" aria-pressed="${liked}" aria-label="${liked ? '已点赞，不能取消' : '给这个词点赞'}" title="${liked ? '已点赞，不能取消' : '点赞'}" ${liked ? 'disabled' : ''}><span>♥</span><b>${count}</b></button>`;
+}
+
 function previousStrip(room) {
   const completed = Array.isArray(room.history) ? room.history : [];
   const rounds = (completed.length ? completed.slice(-2).reverse() : [room.lastRound]).filter(
@@ -557,6 +571,7 @@ function previousStrip(room) {
               (entry) => `<div class="prev-word" style="--color:${esc(entry.color)}">
                 <span>${esc(entry.name)}</span>
                 <b>${entry.word ? esc(entry.word) : '（空）'}</b>
+                ${likeButton(round.round, entry, 'like-prev')}
               </div>`,
             )
             .join('')}
@@ -600,13 +615,13 @@ function syncLabel() {
 }
 
 function spectatorView(room) {
-  const autoSubmit = room.durationSec === 20;
+  const autoSubmit = AUTO_SUBMIT_DURATIONS.has(room.durationSec);
   return `<div class="spectator-view">
     <span class="spectator-view-eye" aria-hidden="true"><i></i></span>
     <h2>你在观战</h2>
     <p>${
       autoSubmit
-        ? '20 秒极速模式：所有人只写草稿，倒计时结束自动一起揭晓。'
+        ? `${room.durationSec} 秒极速模式：所有人只写草稿，倒计时结束自动一起揭晓。`
         : `${room.submittedCount} / ${room.players.length} 人已提交。提交的词会在揭晓时公开，现在只能看到谁写完了。`
     }</p>
     <div class="spectator-view-note">不写词 · 不点继续 · 揭晓时可看全员答案</div>
@@ -616,7 +631,7 @@ function spectatorView(room) {
 function writingMarkup(room) {
   const viewer = room.viewer;
   const isSpectator = Boolean(viewer.isSpectator);
-  const autoSubmit = room.durationSec === 20;
+  const autoSubmit = AUTO_SUBMIT_DURATIONS.has(room.durationSec);
   const isFirst = room.round <= 1;
   const submitted = viewer.submitted;
   const max = room.maxWordLength;
@@ -639,7 +654,7 @@ function writingMarkup(room) {
             isSpectator
               ? '你在观战。提交阶段看不到大家的词，倒计时结束或全员提交后会一起揭晓。'
               : autoSubmit
-                ? '20 秒极速模式：没有提交按钮，倒计时结束自动用你已同步的草稿揭晓。'
+                ? `${room.durationSec} 秒极速模式：没有提交按钮，倒计时结束自动用你已同步的草稿揭晓。`
                 : isFirst
                   ? '不用解释，凭直觉写。猜一个你们会同时想到的词。'
                   : '上一轮已经摊牌。从这些词出发，找一个你们会共同想到的新词。'
@@ -679,7 +694,7 @@ function writingMarkup(room) {
                     <div class="composer-caption">
                       <p class="composer-hint" id="word-hint">${
                         autoSubmit
-                          ? '20 秒极速模式：写完不用提交，倒计时结束自动揭晓。'
+                          ? `${room.durationSec} 秒极速模式：写完不用提交，倒计时结束自动揭晓。`
                           : isFirst
                             ? '想想你们最容易同时想到的那个词。'
                             : '从上一轮的词继续联想，但不要直接抄。'
@@ -699,10 +714,10 @@ function writingMarkup(room) {
 
           <div class="word-progress">
             <div class="progress-copy">
-              <strong>${autoSubmit ? '⚡ 20 秒极速模式' : `${room.submittedCount} / ${room.players.length} 已提交`}</strong>
+              <strong>${autoSubmit ? `⚡ ${room.durationSec} 秒极速模式` : `${room.submittedCount} / ${room.players.length} 已提交`}</strong>
               <span>${autoSubmit ? '倒计时结束自动揭晓' : room.submittedCount === room.players.length ? '正在揭晓…' : '全员提交后立即揭晓'}</span>
             </div>
-            <div class="progress-avatars" aria-label="${autoSubmit ? '20 秒极速模式，倒计时结束统一揭晓' : `${room.submittedCount} 人已提交`}">${progress}</div>
+            <div class="progress-avatars" aria-label="${autoSubmit ? `${room.durationSec} 秒极速模式，倒计时结束统一揭晓` : `${room.submittedCount} 人已提交`}">${progress}</div>
           </div>
         </section>
 
@@ -716,7 +731,7 @@ function writingMarkup(room) {
                 isSpectator
                   ? '<b>你正在观战</b><p>不能写词、不能点继续。揭晓时可以看到所有玩家提交的词。</p>'
                   : autoSubmit
-                    ? '<b>20 秒极速模式</b><p>没有提交按钮。倒计时结束后，系统会用你<strong>最后一次同步成功的草稿</strong>自动揭晓。空词不算成功。</p>'
+                    ? `<b>${room.durationSec} 秒极速模式</b><p>没有提交按钮。倒计时结束后，系统会用你<strong>最后一次同步成功的草稿</strong>自动揭晓。空词不算成功。</p>`
                     : '<b>倒计时结束怎么办？</b><p>没用提交也没关系，系统会用你<strong>最后一次同步成功的草稿</strong>揭晓。空词不算成功。</p>'
               }
             </div>
@@ -834,6 +849,27 @@ function chainMarkup(room) {
   </section>`;
 }
 
+function rewardMarkup(result) {
+  const groups = Array.isArray(result.partialMatches) ? result.partialMatches : [];
+  if (result.allSame || !groups.length) return '';
+  const top = groups[0];
+  const others = groups.slice(1);
+  const otherText = others.length
+    ? `另外还有 ${others
+        .map((group) => `${group.count} 人同词「${esc(group.word)}」`)
+        .join('、')}。`
+    : '下一轮，从这些词继续靠近。';
+  return `<section class="reward-banner" aria-label="默契奖励">
+    <div class="reward-seal" aria-hidden="true"><span>默契</span><b>×${top.count}</b></div>
+    <div class="reward-copy">
+      <p class="eyebrow">PARTIAL MATCH / 默契奖励</p>
+      <h2><b>${top.count}</b> 个人同时想到了「${esc(top.word)}」</h2>
+      <p>虽然还没有全员同频，但这个方向已经对上了。${otherText}</p>
+    </div>
+    <span class="reward-stamp">+${top.count}</span>
+  </section>`;
+}
+
 function revealMarkup(room) {
   const result = room.result;
   if (!result) return lobbyMarkup(room);
@@ -863,6 +899,8 @@ function revealMarkup(room) {
         <div class="reveal-badge"><i></i>${esc(reason)} · ${count} 个词</div>
       </section>
 
+      ${rewardMarkup(result)}
+
       <section class="reveal-grid" style="--cols:${count}" aria-label="本轮所有人写下的词">
         ${entries
           .map((entry, index) => {
@@ -876,6 +914,7 @@ function revealMarkup(room) {
               <div class="reveal-card-head">
                 <span class="avatar avatar-sm" style="--soft:${esc(entry.color)}33;border-color:${esc(entry.color)}" aria-hidden="true">${esc(firstRune(entry.name))}</span>
                 <span class="reveal-player"><b>${esc(entry.name)}</b><span>PLAYER ${pad2(index + 1)}</span></span>
+                ${likeButton(room.round, entry, 'like-reveal')}
               </div>
               <div class="reveal-card-word${entry.word ? '' : ' empty'}">${entry.word ? esc(entry.word) : '（空词）'}</div>
               <div class="reveal-card-foot">
@@ -892,6 +931,21 @@ function revealMarkup(room) {
       </section>
 
       ${continueBar(room)}
+
+      ${
+        allSame
+          ? `<section class="export-card" aria-label="导出本局数据">
+              <div>
+                <p class="eyebrow">WORD LOG / 本局词链</p>
+                <h2>把这一局留下来。</h2>
+                <p>只复制每一轮玩家写下的词，可直接粘贴到微信或文档。</p>
+              </div>
+              <div class="export-actions">
+                <button type="button" class="btn btn-dark" data-action="copy-word-log">复制词链记录</button>
+              </div>
+            </section>`
+          : ''
+      }
 
       <div class="reveal-tip-row">
         <p><strong>${allSame ? '这一局结束。' : '没有标准答案。'}</strong>${
@@ -1282,13 +1336,30 @@ async function handleEntry() {
   }
 }
 
+async function likeWord(round, playerId) {
+  if (!S.room || !S.creds || S.likeBusy) return;
+  if (!['writing', 'reveal', 'won'].includes(S.room.phase)) return;
+  S.likeBusy = true;
+  try {
+    const data = await api(
+      '/api/like',
+      credentialsBody({ round: Number(round), targetPlayerId: playerId }),
+    );
+    if (data.state) applyState(data.state);
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    S.likeBusy = false;
+  }
+}
+
 async function setDuration(seconds) {
   if (!S.room || !S.creds || S.room.phase !== 'lobby' || !S.room.viewer.isHost) return;
   try {
     const data = await api('/api/duration', credentialsBody({ seconds: Number(seconds) }));
     if (data.state) applyState(data.state);
-    if (Number(seconds) === 20) {
-      showToast('20 秒极速模式：没有提交按钮，倒计时结束自动揭晓。');
+    if (AUTO_SUBMIT_DURATIONS.has(Number(seconds))) {
+      showToast(`${seconds} 秒极速模式：没有提交按钮，倒计时结束自动揭晓。`);
     }
   } catch (error) {
     showToast(error.message);
@@ -1321,8 +1392,8 @@ async function submitWord() {
   ) {
     return;
   }
-  if (S.room.durationSec === 20) {
-    showToast('20 秒模式不用提交，倒计时结束会自动揭晓。');
+  if (AUTO_SUBMIT_DURATIONS.has(S.room.durationSec)) {
+    showToast(`${S.room.durationSec} 秒模式不用提交，倒计时结束会自动揭晓。`);
     return;
   }
   const word = S.draft.trim();
@@ -1885,6 +1956,25 @@ function showToast(message) {
   }, 2800);
 }
 
+/* ----------------------------- Export ----------------------------- */
+
+function buildWordLog() {
+  const lines = [];
+  (S.room?.history || []).forEach((round, index) => {
+    if (index) lines.push('');
+    lines.push(`第 ${round.round} 轮`);
+    for (const entry of round.entries) {
+      lines.push(`${entry.name}：${entry.word || '（空）'}`);
+    }
+  });
+  return lines.join('\n');
+}
+
+function copyWordLog() {
+  if (!S.room || S.room.phase !== 'won') return;
+  copyText(buildWordLog(), '词链记录已复制，可直接粘贴');
+}
+
 /* ----------------------------- Copy ----------------------------- */
 
 async function copyText(text, message) {
@@ -1981,6 +2071,14 @@ function onClick(event) {
       copyText(shareMessage(links), '房间链接和观战链接已一起复制');
       break;
     }
+    case 'copy-word-log':
+      event.preventDefault();
+      copyWordLog();
+      break;
+    case 'like-word':
+      event.preventDefault();
+      likeWord(Number(target.dataset.round), target.dataset.player);
+      break;
     case 'toggle-sound':
       event.preventDefault();
       toggleSound();
@@ -2035,7 +2133,7 @@ function onInput(event) {
     }
     S.draft = value;
     updateComposerUI();
-    queueDraftSave(S.room?.durationSec === 20 ? 120 : 360);
+    queueDraftSave(AUTO_SUBMIT_DURATIONS.has(S.room?.durationSec) ? 120 : 360);
   }
 }
 
