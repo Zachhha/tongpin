@@ -370,6 +370,10 @@ function durationControls(room) {
     .join('')}</div>`;
 }
 
+function shareMessage(links = inviteLinks()) {
+  return `🔗房间链接\n${links.primary}\n\n📺观战链接\n${links.watch}`;
+}
+
 function inviteLinks() {
   if (!S.room) return { primary: '', local: '', lan: '', public: '', watch: '' };
   const code = encodeURIComponent(S.room.code);
@@ -450,6 +454,11 @@ function lobbyMarkup(room) {
               <p class="settings-label">每轮时间<small>${room.viewer.isHost ? '开局前可以调整' : '由房主设置'}</small></p>
               ${durationControls(room)}
             </div>
+            ${
+              room.durationSec === 20
+                ? `<div class="speed-mode-note">⚡ <strong>20 秒极速模式</strong>：没有提交按钮，倒计时结束自动用已同步草稿揭晓。</div>`
+                : ''
+            }
           </div>
 
           <div class="start-row">
@@ -486,6 +495,7 @@ function lobbyMarkup(room) {
               <button type="button" class="btn btn-outline-light" data-action="copy-watch">观战链接</button>
             </div>
             <p class="invite-watch-note">观战不占玩家名额，可随时加入；只能看，不能写词或点继续。</p>
+            <button type="button" class="btn btn-light btn-block share-all" data-action="copy-share">一键复制两个链接</button>
             <div class="invite-url-box">
               <div class="invite-url-label"><span>${isPublic ? '公网邀请链接' : isLanPrimary ? '同一 WI-FI 邀请链接' : '邀请链接'}</span><span>${isPublic ? 'PUBLIC' : 'LINK'}</span></div>
               <span class="invite-url" title="${esc(links.primary)}">${esc(links.primary)}</span>
@@ -523,24 +533,37 @@ function lobbyMarkup(room) {
 /* ----------------------------- Writing ----------------------------- */
 
 function previousStrip(room) {
-  const last = room.lastRound;
-  if (!last || !last.entries.length) return '';
-  return `<section class="previous" aria-labelledby="previous-title">
-    <div class="previous-head">
-      <p class="eyebrow" id="previous-title">LAST ROUND / 上一轮</p>
-      <span class="previous-note">从这里继续联想，但不要直接抄</span>
-    </div>
-    <div class="previous-words cols-${Math.min(last.entries.length, 4)}">
-      ${last.entries
-        .map(
-          (entry) => `<div class="prev-word" style="--color:${esc(entry.color)}">
-            <span>${esc(entry.name)}</span>
-            <b>${entry.word ? esc(entry.word) : '（空）'}</b>
-          </div>`,
-        )
-        .join('')}
-    </div>
-  </section>`;
+  const completed = Array.isArray(room.history) ? room.history : [];
+  const rounds = (completed.length ? completed.slice(-2).reverse() : [room.lastRound]).filter(
+    (round) => round && round.entries.length,
+  );
+  if (!rounds.length) return '';
+
+  return rounds
+    .map((round, index) => {
+      const isOlder = index > 0;
+      const title = isOlder ? 'ROUND BEFORE / 上上轮' : 'LAST ROUND / 上一轮';
+      const note = isOlder
+        ? '再往前一轮，看看联想是怎么走过来的'
+        : '从这里继续联想，但不要直接抄';
+      return `<section class="previous${isOlder ? ' previous-older' : ''}" aria-labelledby="previous-title-${round.round}">
+        <div class="previous-head">
+          <p class="eyebrow" id="previous-title-${round.round}">${title} · R${pad2(round.round)}</p>
+          <span class="previous-note">${note}</span>
+        </div>
+        <div class="previous-words cols-${Math.min(round.entries.length, 4)}">
+          ${round.entries
+            .map(
+              (entry) => `<div class="prev-word" style="--color:${esc(entry.color)}">
+                <span>${esc(entry.name)}</span>
+                <b>${entry.word ? esc(entry.word) : '（空）'}</b>
+              </div>`,
+            )
+            .join('')}
+        </div>
+      </section>`;
+    })
+    .join('');
 }
 
 function playerRows(room) {
@@ -577,10 +600,15 @@ function syncLabel() {
 }
 
 function spectatorView(room) {
+  const autoSubmit = room.durationSec === 20;
   return `<div class="spectator-view">
     <span class="spectator-view-eye" aria-hidden="true"><i></i></span>
     <h2>你在观战</h2>
-    <p>${room.submittedCount} / ${room.players.length} 人已提交。提交的词会在揭晓时公开，现在只能看到谁写完了。</p>
+    <p>${
+      autoSubmit
+        ? '20 秒极速模式：所有人只写草稿，倒计时结束自动一起揭晓。'
+        : `${room.submittedCount} / ${room.players.length} 人已提交。提交的词会在揭晓时公开，现在只能看到谁写完了。`
+    }</p>
     <div class="spectator-view-note">不写词 · 不点继续 · 揭晓时可看全员答案</div>
   </div>`;
 }
@@ -588,6 +616,7 @@ function spectatorView(room) {
 function writingMarkup(room) {
   const viewer = room.viewer;
   const isSpectator = Boolean(viewer.isSpectator);
+  const autoSubmit = room.durationSec === 20;
   const isFirst = room.round <= 1;
   const submitted = viewer.submitted;
   const max = room.maxWordLength;
@@ -609,9 +638,11 @@ function writingMarkup(room) {
           <p class="play-sub">${
             isSpectator
               ? '你在观战。提交阶段看不到大家的词，倒计时结束或全员提交后会一起揭晓。'
-              : isFirst
-                ? '不用解释，凭直觉写。猜一个你们会同时想到的词。'
-                : '上一轮已经摊牌。从这些词出发，找一个你们会共同想到的新词。'
+              : autoSubmit
+                ? '20 秒极速模式：没有提交按钮，倒计时结束自动用你已同步的草稿揭晓。'
+                : isFirst
+                  ? '不用解释，凭直觉写。猜一个你们会同时想到的词。'
+                  : '上一轮已经摊牌。从这些词出发，找一个你们会共同想到的新词。'
           }</p>
         </div>
         <div class="timer-block">
@@ -646,21 +677,32 @@ function writingMarkup(room) {
                       <span class="word-count" id="word-count">${runes}/${max}</span>
                     </div>
                     <div class="composer-caption">
-                      <p class="composer-hint" id="word-hint">${isFirst ? '想想你们最容易同时想到的那个词。' : '从上一轮的词继续联想，但不要直接抄。'}</p>
+                      <p class="composer-hint" id="word-hint">${
+                        autoSubmit
+                          ? '20 秒极速模式：写完不用提交，倒计时结束自动揭晓。'
+                          : isFirst
+                            ? '想想你们最容易同时想到的那个词。'
+                            : '从上一轮的词继续联想，但不要直接抄。'
+                      }</p>
                     </div>
-                    <div class="composer-actions">
-                      <button type="button" class="btn btn-primary" data-action="submit-word" ${!S.draft.trim() || S.submitBusy ? 'disabled' : ''}>${S.submitBusy ? '提交中…' : '提交这个词'}${!S.submitBusy ? ICONS.arrow : ''}</button>
-                      <span class="submit-note">提交后不能修改<br />超时使用已同步草稿</span>
+                    <div class="composer-actions${autoSubmit ? ' auto-submit-actions' : ''}">
+                      ${
+                        autoSubmit
+                          ? `<span class="auto-submit-badge">⚡ 自动提交</span>
+                             <span class="submit-note">不设提交按钮<br />倒计时结束用已同步草稿揭晓</span>`
+                          : `<button type="button" class="btn btn-primary" data-action="submit-word" ${!S.draft.trim() || S.submitBusy ? 'disabled' : ''}>${S.submitBusy ? '提交中…' : '提交这个词'}${!S.submitBusy ? ICONS.arrow : ''}</button>
+                             <span class="submit-note">提交后不能修改<br />超时使用已同步草稿</span>`
+                      }
                     </div>
                   </div>`
           }
 
           <div class="word-progress">
             <div class="progress-copy">
-              <strong>${room.submittedCount} / ${room.players.length} 已提交</strong>
-              <span>${room.submittedCount === room.players.length ? '正在揭晓…' : '全员提交后立即揭晓'}</span>
+              <strong>${autoSubmit ? '⚡ 20 秒极速模式' : `${room.submittedCount} / ${room.players.length} 已提交`}</strong>
+              <span>${autoSubmit ? '倒计时结束自动揭晓' : room.submittedCount === room.players.length ? '正在揭晓…' : '全员提交后立即揭晓'}</span>
             </div>
-            <div class="progress-avatars" aria-label="${room.submittedCount} 人已提交">${progress}</div>
+            <div class="progress-avatars" aria-label="${autoSubmit ? '20 秒极速模式，倒计时结束统一揭晓' : `${room.submittedCount} 人已提交`}">${progress}</div>
           </div>
         </section>
 
@@ -673,7 +715,9 @@ function writingMarkup(room) {
               ${
                 isSpectator
                   ? '<b>你正在观战</b><p>不能写词、不能点继续。揭晓时可以看到所有玩家提交的词。</p>'
-                  : '<b>倒计时结束怎么办？</b><p>没用提交也没关系，系统会用你<strong>最后一次同步成功的草稿</strong>揭晓。空词不算成功。</p>'
+                  : autoSubmit
+                    ? '<b>20 秒极速模式</b><p>没有提交按钮。倒计时结束后，系统会用你<strong>最后一次同步成功的草稿</strong>自动揭晓。空词不算成功。</p>'
+                    : '<b>倒计时结束怎么办？</b><p>没用提交也没关系，系统会用你<strong>最后一次同步成功的草稿</strong>揭晓。空词不算成功。</p>'
               }
             </div>
           </section>
@@ -688,6 +732,8 @@ function writingMarkup(room) {
           </section>
         </aside>
       </div>
+
+      ${isSpectator ? chainMarkup(room) : ''}
     </main>
     ${siteFoot()}
   </div>`;
@@ -1241,6 +1287,9 @@ async function setDuration(seconds) {
   try {
     const data = await api('/api/duration', credentialsBody({ seconds: Number(seconds) }));
     if (data.state) applyState(data.state);
+    if (Number(seconds) === 20) {
+      showToast('20 秒极速模式：没有提交按钮，倒计时结束自动揭晓。');
+    }
   } catch (error) {
     showToast(error.message);
   }
@@ -1270,6 +1319,10 @@ async function submitWord() {
     S.room.viewer.isSpectator ||
     S.room.viewer.submitted
   ) {
+    return;
+  }
+  if (S.room.durationSec === 20) {
+    showToast('20 秒模式不用提交，倒计时结束会自动揭晓。');
     return;
   }
   const word = S.draft.trim();
@@ -1918,6 +1971,12 @@ function onClick(event) {
       copyText(links.watch, '观战链接已复制，不占玩家名额');
       break;
     }
+    case 'copy-share': {
+      event.preventDefault();
+      const links = inviteLinks();
+      copyText(shareMessage(links), '房间链接和观战链接已一起复制');
+      break;
+    }
     case 'toggle-sound':
       event.preventDefault();
       toggleSound();
@@ -1972,7 +2031,7 @@ function onInput(event) {
     }
     S.draft = value;
     updateComposerUI();
-    queueDraftSave();
+    queueDraftSave(S.room?.durationSec === 20 ? 120 : 360);
   }
 }
 
