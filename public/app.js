@@ -1513,7 +1513,8 @@ function applyState(next) {
 
   if (phaseChanged || roundChanged) {
     if (previous?.phase === 'writing' && next.phase === 'won') {
-      playSound('win');
+      playSound('reveal');
+      window.setTimeout(() => playSound('win'), 360);
       setTimeout(launchConfetti, 100);
     } else if (previous?.phase === 'writing' && next.phase === 'reveal') {
       playSound('reveal');
@@ -1795,7 +1796,10 @@ function playSound(kind) {
       submit: [[660, 0, 0.09, 0.035], [880, 0.06, 0.12, 0.025]],
       continue: [[440, 0, 0.08, 0.03], [590, 0.06, 0.1, 0.025]],
       start: [[392, 0, 0.1, 0.03], [523, 0.08, 0.13, 0.03]],
-      reveal: [[392, 0, 0.12, 0.03], [330, 0.1, 0.16, 0.025]],
+      reveal: [
+        [1046.5, 0, 0.16, 0.055],
+        [783.99, 0.16, 0.3, 0.045],
+      ],
       win: [
         [523, 0, 0.13, 0.035],
         [659, 0.1, 0.13, 0.035],
@@ -1807,7 +1811,7 @@ function playSound(kind) {
     for (const [frequency, offset, duration, volume] of notes) {
       const oscillator = context.createOscillator();
       const gain = context.createGain();
-      oscillator.type = kind === 'win' ? 'triangle' : 'sine';
+      oscillator.type = kind === 'win' || kind === 'reveal' ? 'triangle' : 'sine';
       oscillator.frequency.setValueAtTime(frequency, now + offset);
       gain.gain.setValueAtTime(0.0001, now + offset);
       gain.gain.exponentialRampToValueAtTime(volume, now + offset + 0.015);
@@ -2151,6 +2155,18 @@ async function init() {
 }
 
 function bindEvents() {
+  // Browsers create WebAudio in a suspended state until a real user gesture.
+  // Unlock it as soon as someone clicks or types, so the later reveal chime
+  // can play even when it is triggered by the server.
+  let audioUnlocked = false;
+  const unlockAudio = () => {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    if (S.sound) getAudioContext();
+  };
+  document.addEventListener('pointerdown', unlockAudio, { once: true });
+  document.addEventListener('keydown', unlockAudio, { once: true });
+
   document.addEventListener('click', onClick);
   document.addEventListener('input', onInput);
   document.addEventListener('submit', onSubmit);
