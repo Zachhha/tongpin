@@ -4096,3 +4096,99 @@ a {
     font-size: 8px;
   }
 }
+
+/* Make the latest previous round prominent, the older one secondary */
+.previous:not(.previous-older) {
+  border-color: var(--line-strong);
+  background: rgba(255, 253, 248, 0.66);
+}
+
+.previous-older {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-style: dashed;
+  background: transparent;
+  opacity: 0.52;
+}
+
+.previous-older .previous-head {
+  margin-bottom: 4px;
+}
+
+.previous-older .previous-head .eyebrow {
+  color: var(--muted);
+  font-size: 7px;
+  letter-spacing: 0.08em;
+}
+
+.previous-older .previous-note {
+  display: none;
+}
+
+.previous-older .previous-words {
+  gap: 6px;
+}
+
+.previous-older .prev-word {
+  padding: 4px 8px 5px;
+  border-left-width: 1.5px;
+  background: transparent;
+}
+
+.previous-older .prev-word span {
+  font-size: 7.5px;
+}
+
+.previous-older .prev-word b {
+  margin-top: 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.restart-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 22px auto 2px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.restart-link {
+  flex: 0 0 auto;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.restart-link:hover {
+  color: var(--red);
+}
+
+@media (max-width: 660px) {
+  .previous-older {
+    padding: 7px 9px;
+  }
+
+  .previous-older .prev-word b {
+    font-size: 13px;
+  }
+
+  .previous-older .prev-word span {
+    font-size: 7px;
+  }
+
+  .restart-row {
+    margin-top: 17px;
+    font-size: 9px;
+  }
+}
+
+.previous-older {
+  animation: none;
+  opacity: 0.52;
+}

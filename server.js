@@ -483,6 +483,15 @@ function createApp(options = {}) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/restart') {
+      await handleAction(req, res, async (body) => {
+        const { room } = game.restart(body.code, body.playerId, body.token);
+        broadcast(room);
+        return { ok: true, state: game.view(room, body.playerId) };
+      });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/draft') {
       await handleAction(req, res, async (body) => {
         const { room, player } = game.saveDraft(

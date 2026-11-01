@@ -28,6 +28,7 @@ const S = {
   continueBusy: false,
   submitBusy: false,
   likeBusy: false,
+  restartBusy: false,
   creds: null,
   room: null,
   info: null,
@@ -749,6 +750,7 @@ function writingMarkup(room) {
       </div>
 
       ${isSpectator ? chainMarkup(room) : ''}
+      ${restartBar(room)}
     </main>
     ${siteFoot()}
   </div>`;
@@ -820,6 +822,17 @@ function continueBar(room) {
       ${!S.continueBusy && !viewerReady && canAdvance ? ICONS.arrow : ''}
     </button>
   </section>`;
+}
+
+function restartBar(room) {
+  if (room.phase === 'lobby' || room.viewer.isSpectator) return '';
+  if (!room.viewer.isHost) {
+    return `<div class="restart-row"><span>想重来？等房主重开本局。</span></div>`;
+  }
+  return `<div class="restart-row">
+    <span>放弃当前对局，原班人马回到大厅。</span>
+    <button type="button" class="text-link restart-link" data-action="restart-game">重开本局</button>
+  </div>`;
 }
 
 function chainMarkup(room) {
@@ -961,6 +974,7 @@ function revealMarkup(room) {
       </div>
 
       ${chainMarkup(room)}
+      ${restartBar(room)}
     </main>
     ${siteFoot()}
   </div>`;
@@ -1333,6 +1347,25 @@ async function handleEntry() {
     render();
     S.focusField = isJoin || isWatch ? 'join-code' : 'player-name';
     render();
+  }
+}
+
+async function restartGame() {
+  if (!S.room || !S.room.viewer.isHost || S.room.phase === 'lobby' || S.restartBusy) return;
+  const confirmed = window.confirm(
+    '重开会放弃当前对局，清空本轮词链和点赞。原班人马会留在房间，一起回到大厅。确定吗？',
+  );
+  if (!confirmed) return;
+
+  S.restartBusy = true;
+  try {
+    const data = await api('/api/restart', credentialsBody());
+    if (data.state) applyState(data.state);
+    showToast('已重开，原班人马都还在，等房主开始');
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    S.restartBusy = false;
   }
 }
 
@@ -2078,6 +2111,10 @@ function onClick(event) {
     case 'like-word':
       event.preventDefault();
       likeWord(Number(target.dataset.round), target.dataset.player);
+      break;
+    case 'restart-game':
+      event.preventDefault();
+      restartGame();
       break;
     case 'toggle-sound':
       event.preventDefault();
