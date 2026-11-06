@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f4efe4" />
+    <meta
+      name="description"
+      content="同频猜分模式：描述者私密抽一个 0–10 分，补完「TA 是一个满分朋友，但是……」，猜分者凭自己的标准打分。"
+    />
+    <title>猜分模式 · 同频</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/guess.css" />
+  </head>
+  <body class="guess-body">
+    <a class="skip-link" href="#main">跳到主要内容</a>
+    <div class="page-noise" aria-hidden="true"></div>
+    <div id="app">
+      <div class="boot" role="status" aria-live="polite">
+        <div class="boot-mark" aria-hidden="true"><i></i><i></i></div>
+        <p>正在调频…</p>
+      </div>
+    </div>
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+    <noscript>
+      <div class="noscript">这个游戏需要开启 JavaScript 才能玩。</div>
+    </noscript>
+    <script src="/guess.js" defer></script>
+  </body>
+</html>

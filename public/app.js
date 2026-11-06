@@ -169,6 +169,7 @@ function homeHeader() {
   return `<header class="site-head">
     ${logoMarkup(true)}
     <nav class="site-nav" aria-label="站点导航">
+      <a class="text-link" href="/guess">猜分模式</a>
       <button type="button" class="text-link" data-action="open-how">怎么玩</button>
     </nav>
   </header>`;

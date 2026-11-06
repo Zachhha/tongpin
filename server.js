@@ -5,6 +5,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 const { GameStore, GameError } = require('./lib/game');
+const { GuessStore } = require('./lib/guess');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DEFAULT_PORT = Number(process.env.PORT) || 8787;
@@ -21,6 +22,11 @@ const STATIC_FILES = new Map([
   ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
   ['/favicon.svg', ['favicon.svg', 'image/svg+xml']],
   ['/og-card.svg', ['og-card.svg', 'image/svg+xml']],
+  ['/guess', ['guess.html', 'text/html; charset=utf-8']],
+  ['/guess/', ['guess.html', 'text/html; charset=utf-8']],
+  ['/guess.html', ['guess.html', 'text/html; charset=utf-8']],
+  ['/guess.css', ['guess.css', 'text/css; charset=utf-8']],
+  ['/guess.js', ['guess.js', 'text/javascript; charset=utf-8']],
 ]);
 
 function sendJson(res, status, payload) {
@@ -113,6 +119,7 @@ function isLoopbackHost(hostname) {
 
 function createApp(options = {}) {
   const game = new GameStore({ allowedDurations: options.allowedDurations });
+  const guess = new GuessStore();
   const publicUrl = normalizePublicUrl(
     options.publicUrl ||
       process.env.PUBLIC_URL ||
@@ -543,6 +550,169 @@ function createApp(options = {}) {
           advanced: outcome.advanced,
           state: game.view(outcome.room, body.playerId),
         };
+      });
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/guess/state') {
+      try {
+        const room = guess.room(url.searchParams.get('code'));
+        const role =
+          url.searchParams.get('role') === 'spectator' ? 'spectator' : 'player';
+        const state = guess.view(room, url.searchParams.get('playerId'), role);
+        sendJson(res, 200, { ok: true, state });
+      } catch (error) {
+        sendJson(res, error.status || 500, { error: error.message || '读取失败。' });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/guess/rooms') {
+      await handleAction(req, res, async (body) => {
+        const { room, player } = guess.createRoom(body.name);
+        return {
+          code: room.code,
+          playerId: player.id,
+          token: player.token,
+          state: guess.view(room, player.id),
+        };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/guess/join') {
+      await handleAction(req, res, async (body) => {
+        const { room, player } = guess.joinRoom(body.code, body.name);
+        return {
+          code: room.code,
+          playerId: player.id,
+          token: player.token,
+          state: guess.view(room, player.id),
+        };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/guess/spectate') {
+      await handleAction(req, res, async (body) => {
+        const { room, spectator } = guess.addSpectator(body.code, body.name);
+        return {
+          code: room.code,
+          playerId: spectator.id,
+          spectatorId: spectator.id,
+          token: spectator.token,
+          role: 'spectator',
+          name: spectator.name,
+          state: guess.view(room, spectator.id, 'spectator'),
+        };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/guess/spectate/leave') {
+      await handleAction(req, res, async (body) => {
+        const outcome = guess.leaveSpectator(body.code, body.playerId, body.token);
+        return { ok: true, deleted: outcome.deleted };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/guess/rejoin') {
+      await handleAction(req, res, async (body) => {
+        const role = body.role === 'spectator' ? 'spectator' : 'player';
+        const outcome = guess.rejoin(body.code, body.playerId, body.token, role);
+        const member = role === 'spectator' ? outcome.spectator : outcome.player;
+        return {
+          code: outcome.room.code,
+          playerId: member.id,
+          token: member.token,
+          role,
+          name: member.name,
+          state: guess.view(outcome.room, member.id, role),
+        };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/guess/restart') {
+      await handleAction(req, res, async (body) => {
+        const { room } = guess.restart(body.code, body.playerId, body.token);
+        return { ok: true, state: guess.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/guess/subject') {
+      await handleAction(req, res, async (body) => {
+        const { room } = guess.setSubject(
+          body.code,
+          body.playerId,
+          body.token,
+          body.subject,
+          body.subjectCustom,
+        );
+        return { ok: true, state: guess.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/guess/start') {
+      await handleAction(req, res, async (body) => {
+        const { room } = guess.start(
+          body.code,
+          body.playerId,
+          body.token,
+          body.subject,
+          body.subjectCustom,
+        );
+        return { ok: true, state: guess.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/guess/describe') {
+      await handleAction(req, res, async (body) => {
+        const { room } = guess.submitDescription(
+          body.code,
+          body.playerId,
+          body.token,
+          body.description,
+        );
+        return { ok: true, state: guess.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/guess/rate') {
+      await handleAction(req, res, async (body) => {
+        const { room } = guess.submitGuess(
+          body.code,
+          body.playerId,
+          body.token,
+          body.score,
+        );
+        return { ok: true, state: guess.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/guess/next') {
+      await handleAction(req, res, async (body) => {
+        const { room } = guess.chooseNext(
+          body.code,
+          body.playerId,
+          body.token,
+          body.nextDescriptorId,
+        );
+        return { ok: true, state: guess.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/guess/leave') {
+      await handleAction(req, res, async (body) => {
+        const outcome = guess.leaveLobby(body.code, body.playerId, body.token);
+        return { ok: true, deleted: outcome.deleted };
       });
       return;
     }
