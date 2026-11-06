@@ -43,6 +43,11 @@ const S = {
   description: '',
   subjectMode: 'friend',
   subjectKeyword: '',
+  qaMode: false,
+  questionText: '',
+  answers: {},
+  autoQuestionSent: false,
+  clockOffset: 0,
   selectedScore: null,
   lastSig: null,
 };
@@ -183,6 +188,14 @@ function applyState(state) {
   const previous = S.room;
   S.lastSig = signature;
   S.room = state;
+  S.clockOffset = Number(state.serverNow) - Date.now();
+  if (state.phase === 'question' && previous?.phase !== 'question') {
+    S.questionText = '';
+    S.autoQuestionSent = false;
+  }
+  if (state.phase === 'answer' && previous?.phase !== 'answer') {
+    S.answers = {};
+  }
   if (
     previous &&
     (previous.round !== state.round ||
@@ -197,6 +210,7 @@ function applyState(state) {
     if (previous?.phase && previous.phase !== 'lobby') {
       S.subjectMode = state.subjectCustom ? 'custom' : 'friend';
       S.subjectKeyword = state.subjectCustom ? state.subject : '';
+      S.qaMode = Boolean(state.qaMode);
     }
   }
   render();
@@ -217,6 +231,10 @@ function adopt(data) {
   S.description = '';
   S.subjectMode = data.state.subjectCustom ? 'custom' : 'friend';
   S.subjectKeyword = data.state.subjectCustom ? data.state.subject : '';
+  S.qaMode = Boolean(data.state.qaMode);
+  S.questionText = '';
+  S.answers = {};
+  S.clockOffset = Number(data.state.serverNow) - Date.now();
   S.selectedScore = null;
   S.lastSig = stateSignature(data.state);
   saveSession(S.creds);
@@ -364,6 +382,10 @@ function prepMarkup(room, isHost) {
     return `<div class="guess-prep readonly">
       <span>本局满分对象</span>
       <b>满分${subjectText}</b>
+    </div>
+    <div class="guess-prep readonly">
+      <span>玩法</span>
+      <b>${room.qaMode ? '问答模式' : '直接猜分'}</b>
     </div>`;
   }
   return `<div class="guess-prep">
@@ -377,6 +399,14 @@ function prepMarkup(room, isHost) {
         ? `<label class="guess-subject-field">满分（<input id="guess-prep-subject" type="text" maxlength="8" placeholder="同事" value="${esc(S.subjectKeyword)}" autocomplete="off" />）</label>`
         : '<p class="guess-subject-hint">也可以换成同事、男友、妈妈、室友……</p>'
     }
+  </div>
+  <div class="guess-prep">
+    <div class="guess-prep-head"><b>玩法</b><span>开局前选择</span></div>
+    <div class="guess-subject-options">
+      <button type="button" class="${!S.qaMode ? 'active' : ''}" data-action="guess-qa" data-mode="direct">直接猜分</button>
+      <button type="button" class="${S.qaMode ? 'active' : ''}" data-action="guess-qa" data-mode="qa">问答模式</button>
+    </div>
+    <p class="guess-subject-hint">问答模式：描述后，猜分者先问一个问题（40 秒），描述者回答后再猜分。</p>
   </div>`;
 }
 
@@ -519,6 +549,126 @@ function describeMarkup(room) {
   </div>`;
 }
 
+function qaSummaryMarkup(room) {
+  if (!room.qaMode || !room.questions?.length) return '';
+  return `<section class="guess-qa-card">
+    <p class="eyebrow">Q&A / 这一轮的问答</p>
+    ${room.questions
+      .map(
+        (item) => `<div class="guess-qa-item">
+          <p><b>${esc(item.name)} 问</b>${item.question ? esc(item.question) : '（没有提问）'}</p>
+          ${item.answer ? `<p class="answer"><b>描述者答</b>${esc(item.answer)}</p>` : ''}
+        </div>`,
+      )
+      .join('')}
+  </section>`;
+}
+
+function questionMarkup(room) {
+  const viewer = room.viewer;
+  const isDescriptor = viewer.isDescriptor;
+  const isSpectator = Boolean(viewer.isSpectator);
+  const submitted = viewer.questionSubmitted;
+  const description = room.description;
+  const remaining = Math.max(
+    0,
+    Math.ceil((room.phaseEndsAt - (Date.now() + S.clockOffset)) / 1000),
+  );
+  return `<div class="guess-shell">
+    ${headerMarkup(room)}
+    <main class="guess-page" id="main">
+      <div class="guess-round-line"><span>ROUND ${String(room.round).padStart(2, '0')}</span><i></i><span>${isSpectator ? '观战' : isDescriptor ? '等提问' : submitted ? '已提问' : '提问中'}</span></div>
+      <div class="guess-page-head">
+        <div>
+          <p class="eyebrow">QUESTION / 问一个问题</p>
+          <h1 class="guess-title">${isSpectator ? '他们在问，<br /><span>你先看。</span>' : isDescriptor ? '等他们问一个问题，<br /><span>再回答。</span>' : '抓住机会，<br /><span>问一个问题。</span>'}</h1>
+          <p class="guess-sub">${isDescriptor ? '猜分者可以问你一个问题。40 秒内没有提交，会按已填写的内容自动提交。' : isSpectator ? '你能看到谁已提问。问题内容和答案会在之后公开。' : '根据描述，问一个能帮你判断分数的问题。40 秒后自动提交。'}</p>
+        </div>
+        <div class="guess-question-timer" aria-label="提问剩余时间">
+          <span>QUESTION TIME</span>
+          <b data-question-countdown>${remaining}</b>
+          <em>SECONDS</em>
+        </div>
+      </div>
+
+      <section class="guess-description-card">
+        <p class="eyebrow">THE DESCRIPTION / 这一句话</p>
+        <blockquote>TA 是一个满分${subjectDisplay(room.subject, room.subjectCustom)}，但是<span class="guess-sentence-paren">（</span>${esc(butClause(description))}<span class="guess-sentence-paren">）</span></blockquote>
+        <span>描述者：${esc(room.descriptorName || '')}</span>
+      </section>
+
+      ${
+        isDescriptor || isSpectator
+          ? `<section class="guess-panel guess-waiting-panel">
+              <div class="guess-panel-head"><h2>${isSpectator ? '提问进度' : '猜分者在提问'}</h2><span>${room.submittedQuestions} / ${room.questionCount}</span></div>
+              <div class="guess-player-list">${room.players.filter((player) => !player.isDescriptor).map((player) => playerMarkup(player, room)).join('')}</div>
+              <p class="guess-wait-copy">${isSpectator ? '问题提交后，描述者会先回答，再进入猜分。' : '收到问题后，你需要先回答，猜分者才能猜分。'}</p>
+            </section>`
+          : submitted
+            ? `<section class="guess-panel guess-waiting-panel">
+                <h2>问题已提交</h2>
+                <p class="guess-wait-copy">你的问题：${esc(viewer.question || '（已提交）')}</p>
+                <p class="guess-wait-copy">等描述者回答后，进入猜分。</p>
+              </section>`
+            : `<section class="guess-question-card">
+                <div class="guess-panel-head"><h2>你的问题</h2><span>最多 120 字</span></div>
+                <textarea id="guess-question" class="guess-textarea" maxlength="120" rows="4" placeholder="比如：如果他和朋友约好，但临时有事，会怎么处理？">${esc(S.questionText)}</textarea>
+                <p class="guess-example">问一个能帮你判断目标分的问题。时间到会自动提交当前内容。</p>
+                <button class="btn btn-primary guess-wide" data-action="guess-submit-question" ${S.busy ? 'disabled' : ''}>${S.busy ? '正在提交…' : '提交问题'}</button>
+              </section>`
+      }
+      ${restartGuessBar(room)}
+    </main>
+    ${footMarkup()}
+  </div>`;
+}
+
+function answerMarkup(room) {
+  const viewer = room.viewer;
+  const isDescriptor = viewer.isDescriptor;
+  const isSpectator = Boolean(viewer.isSpectator);
+  return `<div class="guess-shell">
+    ${headerMarkup(room)}
+    <main class="guess-page" id="main">
+      <div class="guess-round-line"><span>ROUND ${String(room.round).padStart(2, '0')}</span><i></i><span>${isSpectator ? '观战' : isDescriptor ? '回答中' : '等回答'}</span></div>
+      <div class="guess-page-head">
+        <div>
+          <p class="eyebrow">ANSWER / 描述者回答</p>
+          <h1 class="guess-title">${isDescriptor ? '回答他们的问题，<br /><span>再让他们猜。</span>' : '问题已经问出，<br /><span>等描述者回答。</span>'}</h1>
+          <p class="guess-sub">${isDescriptor ? '回答不限时。回答完之后，猜分者才可以打分。' : '描述者回答后，你就能看到答案并开始猜分。'}</p>
+        </div>
+      </div>
+
+      <section class="guess-qa-card">
+        <p class="eyebrow">QUESTIONS / 这一轮的问题</p>
+        ${room.questions
+          .map(
+            (item) => `<div class="guess-qa-item">
+              <p><b>${esc(item.name)} 问</b>${item.question ? esc(item.question) : '（没有提问）'}</p>
+              ${
+                isDescriptor && item.question
+                  ? `<textarea class="guess-textarea guess-answer-input" data-answer-player="${esc(item.playerId)}" maxlength="240" rows="2" placeholder="回答这个问题…">${esc(S.answers[item.playerId] || '')}</textarea>`
+                  : ''
+              }
+            </div>`,
+          )
+          .join('')}
+      </section>
+
+      ${
+        isDescriptor
+          ? `<button class="btn btn-primary guess-wide" data-action="guess-submit-answers" ${S.busy ? 'disabled' : ''}>${S.busy ? '正在提交…' : '回答完了，开始猜分'}</button>`
+          : `<section class="guess-panel guess-waiting-panel">
+              <h2>${isSpectator ? '等描述者回答' : '描述者正在回答'}</h2>
+              <p class="guess-wait-copy">问答结束后，猜分者开始打 0–10 分。</p>
+            </section>`
+      }
+      ${restartGuessBar(room)}
+    </main>
+    ${footMarkup()}
+  </div>`;
+}
+
 function guessMarkup(room) {
   const viewer = room.viewer;
   const isDescriptor = viewer.isDescriptor;
@@ -548,6 +698,8 @@ function guessMarkup(room) {
         <blockquote>TA 是一个满分${subjectDisplay(room.subject, room.subjectCustom)}，但是<span class="guess-sentence-paren">（</span>${esc(butClause(description))}<span class="guess-sentence-paren">）</span></blockquote>
         <span>描述者：${esc(room.descriptorName || '')}</span>
       </section>
+
+      ${qaSummaryMarkup(room)}
 
       ${
         isSpectator
@@ -596,6 +748,8 @@ function revealMarkup(room) {
         <p class="eyebrow">THE DESCRIPTION / 这一句话</p>
         <blockquote>TA 是一个满分${subjectDisplay(result.subject, result.subjectCustom)}，但是<span class="guess-sentence-paren">（</span>${esc(butClause(result.description))}<span class="guess-sentence-paren">）</span></blockquote>
       </section>
+
+      ${qaSummaryMarkup(room)}
 
       <section class="guess-results" aria-label="猜分结果">
         ${result.entries
@@ -658,6 +812,8 @@ function render() {
   }
   if (S.room.phase === 'lobby') app.innerHTML = lobbyMarkup(S.room);
   else if (S.room.phase === 'describe') app.innerHTML = describeMarkup(S.room);
+  else if (S.room.phase === 'question') app.innerHTML = questionMarkup(S.room);
+  else if (S.room.phase === 'answer') app.innerHTML = answerMarkup(S.room);
   else if (S.room.phase === 'guess') app.innerHTML = guessMarkup(S.room);
   else app.innerHTML = revealMarkup(S.room);
 }
@@ -716,6 +872,19 @@ async function rejoin() {
   }
 }
 
+async function saveOptions() {
+  if (!S.room || S.room.phase !== 'lobby' || !S.room.viewer.isHost || !S.creds) return;
+  try {
+    const data = await api('/api/guess/options', {
+      ...S.creds,
+      qaMode: S.qaMode,
+    });
+    if (data.state) applyState(data.state);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
 async function saveSubject() {
   if (!S.room || S.room.phase !== 'lobby' || !S.room.viewer.isHost || !S.creds) return;
   const custom = S.subjectMode === 'custom';
@@ -729,6 +898,57 @@ async function saveSubject() {
     if (data.state) applyState(data.state);
   } catch (error) {
     showToast(error.message);
+  }
+}
+
+let questionDraftTimer = null;
+
+async function submitQuestion(auto = false) {
+  if (!S.room || S.room.phase !== 'question') return;
+  if (S.room.viewer.questionSubmitted || S.room.viewer.isDescriptor || S.room.viewer.isSpectator) return;
+  if (!auto && !S.questionText.trim()) {
+    showToast('先写一个问题。');
+    return;
+  }
+  if (auto) {
+    try {
+      const data = await api('/api/guess/question', {
+        ...S.creds,
+        question: S.questionText,
+      });
+      if (data.state) applyState(data.state);
+    } catch {
+      // The server may have advanced already.
+    }
+    return;
+  }
+  action('/api/guess/question', { question: S.questionText });
+}
+
+function submitAnswers() {
+  if (!S.room || S.room.phase !== 'answer') return;
+  action('/api/guess/answers', { answers: S.answers });
+}
+
+function updateQuestionCountdown() {
+  if (!S.room || S.room.phase !== 'question') return;
+  const remaining = Math.max(
+    0,
+    Math.ceil((S.room.phaseEndsAt - (Date.now() + S.clockOffset)) / 1000),
+  );
+  for (const node of $$('[data-question-countdown]')) {
+    node.textContent = String(remaining);
+  }
+  const viewer = S.room.viewer;
+  if (
+    remaining <= 0 &&
+    !viewer.isDescriptor &&
+    !viewer.isSpectator &&
+    !viewer.questionSubmitted &&
+    !S.autoQuestionSent
+  ) {
+    S.autoQuestionSent = true;
+    submitQuestion(true);
   }
 }
 
@@ -765,6 +985,10 @@ function buildGuessExport(room) {
     );
     lines.push('猜分：');
     for (const entry of round.entries) {
+      if (entry.question) {
+        lines.push(`- ${entry.name} 问：${entry.question}`);
+        lines.push(`  描述者答：${entry.answer || '（没有回答）'}`);
+      }
       const detail =
         entry.diff === 0
           ? '猜中，读心成功'
@@ -864,7 +1088,15 @@ document.addEventListener('click', (event) => {
     action('/api/guess/start', {
       subject: custom ? S.subjectKeyword.trim() : '朋友',
       subjectCustom: custom,
+      qaMode: S.qaMode,
     });
+    return;
+  }
+  if (actionName === 'guess-qa') {
+    event.preventDefault();
+    S.qaMode = target.dataset.mode === 'qa';
+    render();
+    saveOptions();
     return;
   }
   if (actionName === 'guess-prep-subject') {
@@ -881,6 +1113,16 @@ document.addEventListener('click', (event) => {
   if (actionName === 'guess-describe') {
     event.preventDefault();
     action('/api/guess/describe', { description: S.description });
+    return;
+  }
+  if (actionName === 'guess-submit-question') {
+    event.preventDefault();
+    submitQuestion(false);
+    return;
+  }
+  if (actionName === 'guess-submit-answers') {
+    event.preventDefault();
+    submitAnswers();
     return;
   }
   if (actionName === 'guess-score') {
@@ -944,6 +1186,22 @@ document.addEventListener('input', (event) => {
     const submit = $('[data-action="guess-describe"]');
     if (submit) submit.disabled = !S.description.trim() || S.busy;
   }
+  if (event.target.id === 'guess-question') {
+    S.questionText = event.target.value.slice(0, 120);
+    const submit = $('[data-action="guess-submit-question"]');
+    if (submit) submit.disabled = false;
+    window.clearTimeout(questionDraftTimer);
+    questionDraftTimer = window.setTimeout(() => {
+      if (!S.creds || S.room?.phase !== 'question') return;
+      api('/api/guess/question-draft', {
+        ...S.creds,
+        question: S.questionText,
+      }).catch(() => {});
+    }, 300);
+  }
+  if (event.target.dataset.answerPlayer) {
+    S.answers[event.target.dataset.answerPlayer] = event.target.value.slice(0, 240);
+  }
 });
 
 document.addEventListener('change', (event) => {
@@ -955,6 +1213,8 @@ document.addEventListener('submit', (event) => {
   event.preventDefault();
   submitEntry();
 });
+
+window.setInterval(updateQuestionCountdown, 250);
 
 async function boot() {
   const params = new URLSearchParams(location.search);

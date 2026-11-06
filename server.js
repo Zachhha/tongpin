@@ -642,6 +642,58 @@ function createApp(options = {}) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/guess/options') {
+      await handleAction(req, res, async (body) => {
+        const { room } = guess.setOptions(
+          body.code,
+          body.playerId,
+          body.token,
+          body.qaMode,
+        );
+        return { ok: true, state: guess.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/guess/question') {
+      await handleAction(req, res, async (body) => {
+        const { room } = guess.submitQuestion(
+          body.code,
+          body.playerId,
+          body.token,
+          body.question,
+        );
+        return { ok: true, state: guess.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/guess/question-draft') {
+      await handleAction(req, res, async (body) => {
+        const outcome = guess.saveQuestionDraft(
+          body.code,
+          body.playerId,
+          body.token,
+          body.question,
+        );
+        return { ok: true, draft: outcome.draft };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/guess/answers') {
+      await handleAction(req, res, async (body) => {
+        const { room } = guess.submitAnswers(
+          body.code,
+          body.playerId,
+          body.token,
+          body.answers,
+        );
+        return { ok: true, state: guess.view(room, body.playerId) };
+      });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/guess/subject') {
       await handleAction(req, res, async (body) => {
         const { room } = guess.setSubject(
@@ -664,6 +716,7 @@ function createApp(options = {}) {
           body.token,
           body.subject,
           body.subjectCustom,
+          body.qaMode,
         );
         return { ok: true, state: guess.view(room, body.playerId) };
       });
@@ -745,6 +798,11 @@ function createApp(options = {}) {
       if (room.phase === 'writing' && room.phaseEndsAt && Date.now() >= room.phaseEndsAt) {
         const result = game.reveal(room, 'timeout');
         if (result) broadcast(room);
+      }
+    }
+    for (const room of guess.rooms.values()) {
+      if (room.phase === 'question' && room.phaseEndsAt && Date.now() >= room.phaseEndsAt) {
+        guess.finishQuestions(room);
       }
     }
   }, 200);
