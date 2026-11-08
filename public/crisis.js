@@ -13,9 +13,7 @@ const C = {
   role: 'player',
   busy: false,
   error: '',
-  headline: '',
-  statement: '',
-  action: '',
+  proposalText: '',
   rating: { credibility: 3, execution: 3, creativity: 3 },
   autoSubmitted: false,
   clockOffset: 0,
@@ -133,9 +131,7 @@ function adopt(data) {
   C.name = data.state.viewer.name || C.name;
   C.room = data.state;
   C.error = '';
-  C.headline = '';
-  C.statement = '';
-  C.action = '';
+  C.proposalText = '';
   C.rating = { credibility: 3, execution: 3, creativity: 3 };
   C.autoSubmitted = false;
   C.clockOffset = Number(data.state.serverNow) - Date.now();
@@ -162,9 +158,7 @@ function applyState(state) {
     previous &&
     (previous.round !== state.round || (previous.phase !== 'writing' && state.phase === 'writing'))
   ) {
-    C.headline = '';
-    C.statement = '';
-    C.action = '';
+    C.proposalText = '';
     C.rating = { credibility: 3, execution: 3, creativity: 3 };
     C.autoSubmitted = false;
   }
@@ -252,7 +246,7 @@ function landingMarkup() {
       </section>
       <section class="crisis-rules">
         <article><span>01 / CRISIS</span><h3>发危机</h3><p>每轮一张公共危机卡，所有人看到的信息一样。</p></article>
-        <article><span>02 / PROPOSE</span><h3>写提案</h3><p>一句话回应、正式声明、补救行动，不限时。</p></article>
+        <article><span>02 / PROPOSE</span><h3>写提案</h3><p>用一段话写你的公关方案，不限时。</p></article>
         <article><span>03 / VOTE</span><h3>匿名投票</h3><p>3 人以上投别人；2 人局互评三项。</p></article>
         <article><span>04 / SCORE</span><h3>三轮结算</h3><p>每轮累计分数，3 轮后最高者胜出。</p></article>
       </section>
@@ -324,7 +318,7 @@ function lobbyMarkup(room) {
         </section>
         <aside class="crisis-side">
           ${inviteMarkup(room)}
-          <section class="crisis-mini-rules"><p class="eyebrow">HOW / 一轮怎么走</p><ul><li><b>不限时</b> 写三部分提案</li><li><b>全部提交</b> 后匿名亮出</li><li><b>3 人以上</b> 投别人一票</li><li><b>2 人</b> 互评三项 1–5 分</li></ul></section>
+          <section class="crisis-mini-rules"><p class="eyebrow">HOW / 一轮怎么走</p><ul><li><b>不限时</b> 写一段提案</li><li><b>全部提交</b> 后匿名亮出</li><li><b>3 人以上</b> 投别人一票</li><li><b>2 人</b> 互评三项 1–5 分</li></ul></section>
         </aside>
       </div>
     </main>
@@ -360,16 +354,14 @@ function writingMarkup(room) {
     <main class="crisis-page" id="main">
       <div class="crisis-round-line"><span>ROUND ${room.round} / ${room.totalRounds}</span><i></i><span>${isSpectator ? '观战' : submitted ? '已提交' : '写提案中'}</span></div>
       <div class="crisis-page-head">
-        <div><p class="eyebrow">PROPOSE / 写提案</p><h1 class="crisis-title">先处理，<br /><span>再解释。</span></h1><p class="crisis-sub">${isSpectator ? '你在观战。玩家提交后，所有提案会匿名展示。' : '一句话回应、正式声明、补救行动。不限时，全部提交后自动进入匿名投票。'}</p></div>
+        <div><p class="eyebrow">PROPOSE / 写提案</p><h1 class="crisis-title">先处理，<br /><span>再解释。</span></h1><p class="crisis-sub">${isSpectator ? '你在观战。玩家提交后，所有提案会匿名展示。' : '用一段话写你的公关方案。不限时，全部提交后自动进入匿名投票。'}</p></div>
       </div>
       ${crisisCard(room.crisis)}
       ${progressMarkup(room, 'writing')}
       ${isSpectator ? `<section class="crisis-wait-card"><h2>看他们怎么处理</h2><p>所有提案提交后，会匿名展示，然后进入投票。</p></section>` : submitted ? `<section class="crisis-wait-card"><h2>提案已提交</h2><p>等其他人写完，所有方案会匿名亮出。</p></section>` : `<section class="crisis-proposal-form">
         <div class="crisis-panel-head"><h2>你的提案</h2><span>${room.players.length} 家公关团队</span></div>
-        <label class="field"><span class="field-label"><span>一句话回应</span><span>最多 30 字</span></span><input class="text-input headline-input" id="crisis-headline" maxlength="30" value="${esc(C.headline)}" placeholder="比如：先停业，再给所有人一个交代。" /></label>
-        <label class="field"><span class="field-label"><span>正式声明</span><span>最多 220 字</span></span><textarea class="guess-textarea" id="crisis-statement" maxlength="220" rows="3" placeholder="像一份真的声明。">${esc(C.statement)}</textarea></label>
-        <label class="field"><span class="field-label"><span>补救行动</span><span>最多 80 字</span></span><textarea class="guess-textarea" id="crisis-action" maxlength="80" rows="2" placeholder="越具体越容易拿到票。">${esc(C.action)}</textarea></label>
-        <p class="crisis-form-tip">三部分都要写。提交后不能修改。</p>
+        <label class="field"><span class="field-label"><span>写一段公关方案</span><span>最多 400 字</span></span><textarea class="guess-textarea crisis-proposal-textarea" id="crisis-proposal" maxlength="400" rows="7" placeholder="比如：先停业并公开后厨监控，所有受影响顾客全额退款，三天内给出完整整改清单。">${esc(C.proposalText)}</textarea></label>
+        <p class="crisis-form-tip">提交后不能修改。全部提交后进入匿名投票。</p>
         <button class="btn btn-primary crisis-wide" data-action="crisis-submit-proposal" ${C.busy ? 'disabled' : ''}>${C.busy ? '正在提交…' : '提交提案'}</button>
       </section>`}
       ${restartMarkup(room)}
@@ -407,9 +399,7 @@ function proposalMarkup(proposal, room) {
   const canVote = !isSpectator && !proposal.isYou && !room.viewer.voted;
   return `<article class="crisis-proposal-card${proposal.isYou ? ' is-you' : ''}">
     <div class="crisis-proposal-index"><span>PROPOSAL ${esc(proposal.id.slice(0, 4).toUpperCase())}</span><span>${proposal.isYou ? '你的方案' : '匿名方案'}</span></div>
-    <h3>${esc(proposal.headline)}</h3>
-    <p>${esc(proposal.statement)}</p>
-    <p class="action"><b>行动 / </b>${esc(proposal.action)}</p>
+    <p class="crisis-proposal-text">${esc(proposal.text)}</p>
     ${!ratingMode && canVote ? `<button class="btn btn-primary vote-btn" data-action="crisis-vote" data-id="${esc(proposal.id)}">投这份</button>` : ''}
     ${ratingMode && canVote ? `<div class="crisis-rating">
       <label>可信度<select data-rating-key="credibility" data-id="${esc(proposal.id)}">${[1,2,3,4,5].map((n) => `<option value="${n}" ${C.rating.credibility === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
@@ -447,9 +437,7 @@ function resultCardMarkup(entry, result) {
   const isWinner = entry.points > 0 && entry.points === Math.max(...result.entries.map((item) => item.points));
   return `<article class="crisis-proposal-card crisis-result-card${isWinner ? ' is-winner' : ''}">
     <div class="crisis-proposal-index"><span>${esc(entry.name)}</span><span>${result.ratingMode ? '互评' : `${entry.votes} 票`}</span></div>
-    <h3>${esc(entry.proposal.headline)}</h3>
-    <p>${esc(entry.proposal.statement)}</p>
-    <p class="action"><b>行动 / </b>${esc(entry.proposal.action)}</p>
+    <p class="crisis-proposal-text">${esc(entry.proposal.text)}</p>
     <div class="crisis-result-score"><strong>${entry.points} 分</strong><span>${result.ratingMode ? `可信 ${entry.rating?.credibility || 0} · 执行 ${entry.rating?.execution || 0} · 创意 ${entry.rating?.creativity || 0}` : `${entry.votes} 票`}</span></div>
   </article>`;
 }
@@ -475,32 +463,8 @@ function render() {
 }
 
 function updateCountdown() {
-  if (!C.room || !C.room.phaseEndsAt) return;
-  const remaining = Math.max(
-    0,
-    Math.ceil((C.room.phaseEndsAt - (Date.now() + C.clockOffset)) / 1000),
-  );
-  for (const node of $$('[data-crisis-countdown]')) node.textContent = String(remaining);
-  if (
-    C.room.phase === 'writing' &&
-    remaining <= 0 &&
-    !C.autoSubmitted &&
-    !C.room.viewer.submitted &&
-    !C.room.viewer.isSpectator
-  ) {
-    C.autoSubmitted = true;
-    if (C.headline.trim() && C.statement.trim() && C.action.trim()) {
-      api('/api/crisis/proposal', {
-        ...C.creds,
-        headline: C.headline,
-        statement: C.statement,
-        action: C.action,
-      }).then((data) => data.state && applyState(data.state)).catch(() => {});
-    }
-  }
+  // Crisp PR has no phase deadlines; progress is driven by submissions/votes.
 }
-
-window.setInterval(updateCountdown, 500);
 
 async function submitEntry() {
   if (C.busy) return;
@@ -586,9 +550,7 @@ function buildExport(room) {
     lines.push('提案：');
     for (const entry of result.entries) {
       lines.push(`- ${entry.name}`);
-      lines.push(`  一句话：${entry.proposal.headline}`);
-      lines.push(`  声明：${entry.proposal.statement}`);
-      lines.push(`  行动：${entry.proposal.action}`);
+      lines.push(`  提案：${entry.proposal.text}`);
       if (result.ratingMode && entry.rating) {
         lines.push(`  互评：可信 ${entry.rating.credibility} / 执行 ${entry.rating.execution} / 创意 ${entry.rating.creativity}，本轮 ${entry.points} 分`);
       } else {
@@ -649,11 +611,7 @@ document.addEventListener('click', (event) => {
     action('/api/crisis/start', {});
   } else if (actionName === 'crisis-submit-proposal') {
     event.preventDefault();
-    action('/api/crisis/proposal', {
-      headline: C.headline,
-      statement: C.statement,
-      action: C.action,
-    });
+    action('/api/crisis/proposal', { text: C.proposalText });
   } else if (actionName === 'crisis-vote') {
     event.preventDefault();
     action('/api/crisis/vote', { targetId: target.dataset.id });
@@ -684,9 +642,9 @@ document.addEventListener('click', (event) => {
 document.addEventListener('input', (event) => {
   if (event.target.id === 'crisis-name') C.name = event.target.value;
   if (event.target.id === 'crisis-code') C.code = event.target.value.toUpperCase();
-  if (event.target.id === 'crisis-headline') C.headline = event.target.value.slice(0, 30);
-  if (event.target.id === 'crisis-statement') C.statement = event.target.value.slice(0, 220);
-  if (event.target.id === 'crisis-action') C.action = event.target.value.slice(0, 80);
+  if (event.target.id === 'crisis-proposal') {
+    C.proposalText = event.target.value.slice(0, 400);
+  }
 });
 
 document.addEventListener('change', (event) => {

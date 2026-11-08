@@ -856,3 +856,59 @@
     padding: 12px 13px;
   }
 }
+
+.crisis-proposal-textarea {
+  min-height: 190px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.crisis-proposal-text {
+  margin: 13px 0 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.85;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Crisis card gets a red alert treatment while the mode stays blue-green. */
+.crisis-crisis-card {
+  border-color: #c9372c;
+  background: #fff1ee;
+  box-shadow: 6px 6px 0 #c9372c;
+}
+
+.crisis-crisis-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 5px;
+  background: #d92d20;
+}
+
+.crisis-crisis-card::after {
+  content: "BREAKING";
+  color: #b42318;
+}
+
+.crisis-crisis-card .eyebrow {
+  color: #b42318;
+}
+
+.crisis-crisis-card .crisis-facts li::before {
+  color: #d92d20;
+}
+
+.crisis-crisis-card .crisis-heat {
+  background: #fee4e2;
+  color: #912018;
+}
+
+@media (max-width: 660px) {
+  .crisis-crisis-card {
+    box-shadow: 4px 4px 0 #c9372c;
+  }
+}
