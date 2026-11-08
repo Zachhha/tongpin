@@ -4192,3 +4192,103 @@ a {
   animation: none;
   opacity: 0.52;
 }
+
+/* Prominent game-mode switcher on the 同频 home page */
+.home-head-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mode-switch {
+  display: inline-flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1.3px solid var(--ink);
+  border-radius: 13px;
+  background: var(--paper-2);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.mode-switch a {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 9px 13px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 0.18s,
+    color 0.18s;
+}
+
+.mode-switch a + a {
+  border-left: 1px solid var(--line);
+}
+
+.mode-switch a b {
+  font-family: var(--serif);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.mode-switch a span {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+}
+
+.mode-switch a:hover {
+  background: var(--red-soft);
+  color: var(--ink);
+}
+
+.mode-switch a.active {
+  background: var(--ink);
+  color: var(--paper-2);
+}
+
+.mode-switch a.active span {
+  color: rgba(251, 247, 238, 0.62);
+}
+
+@media (max-width: 780px) {
+  .home-head {
+    flex-wrap: wrap;
+  }
+
+  .home-head-right {
+    width: 100%;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .mode-switch {
+    flex: 1;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+
+  .mode-switch a {
+    flex: 1;
+    justify-content: center;
+    padding: 9px 5px;
+  }
+
+  .mode-switch a b {
+    font-size: 13px;
+  }
+
+  .mode-switch a span {
+    display: none;
+  }
+
+  .home-head-right .text-link {
+    flex: 0 0 auto;
+    font-size: 11px;
+    padding: 8px 1px;
+  }
+}

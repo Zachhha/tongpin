@@ -6,6 +6,7 @@ const path = require('node:path');
 const os = require('node:os');
 const { GameStore, GameError } = require('./lib/game');
 const { GuessStore } = require('./lib/guess');
+const { CrisisStore } = require('./lib/crisis');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DEFAULT_PORT = Number(process.env.PORT) || 8787;
@@ -27,6 +28,11 @@ const STATIC_FILES = new Map([
   ['/guess.html', ['guess.html', 'text/html; charset=utf-8']],
   ['/guess.css', ['guess.css', 'text/css; charset=utf-8']],
   ['/guess.js', ['guess.js', 'text/javascript; charset=utf-8']],
+  ['/crisis', ['crisis.html', 'text/html; charset=utf-8']],
+  ['/crisis/', ['crisis.html', 'text/html; charset=utf-8']],
+  ['/crisis.html', ['crisis.html', 'text/html; charset=utf-8']],
+  ['/crisis.css', ['crisis.css', 'text/css; charset=utf-8']],
+  ['/crisis.js', ['crisis.js', 'text/javascript; charset=utf-8']],
 ]);
 
 function sendJson(res, status, payload) {
@@ -120,6 +126,7 @@ function isLoopbackHost(hostname) {
 function createApp(options = {}) {
   const game = new GameStore({ allowedDurations: options.allowedDurations });
   const guess = new GuessStore();
+  const crisis = new CrisisStore();
   const publicUrl = normalizePublicUrl(
     options.publicUrl ||
       process.env.PUBLIC_URL ||
@@ -770,6 +777,161 @@ function createApp(options = {}) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/crisis/state') {
+      try {
+        const room = crisis.room(url.searchParams.get('code'));
+        const role =
+          url.searchParams.get('role') === 'spectator' ? 'spectator' : 'player';
+        sendJson(res, 200, {
+          ok: true,
+          state: crisis.view(room, url.searchParams.get('playerId'), role),
+        });
+      } catch (error) {
+        sendJson(res, error.status || 500, { error: error.message || '读取失败。' });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/crisis/rooms') {
+      await handleAction(req, res, async (body) => {
+        const { room, player } = crisis.createRoom(body.name);
+        return {
+          code: room.code,
+          playerId: player.id,
+          token: player.token,
+          role: 'player',
+          state: crisis.view(room, player.id),
+        };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/crisis/join') {
+      await handleAction(req, res, async (body) => {
+        const { room, player } = crisis.joinRoom(body.code, body.name);
+        return {
+          code: room.code,
+          playerId: player.id,
+          token: player.token,
+          role: 'player',
+          state: crisis.view(room, player.id),
+        };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/crisis/spectate') {
+      await handleAction(req, res, async (body) => {
+        const { room, spectator } = crisis.addSpectator(body.code, body.name);
+        return {
+          code: room.code,
+          playerId: spectator.id,
+          token: spectator.token,
+          role: 'spectator',
+          name: spectator.name,
+          state: crisis.view(room, spectator.id, 'spectator'),
+        };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/crisis/rejoin') {
+      await handleAction(req, res, async (body) => {
+        const role = body.role === 'spectator' ? 'spectator' : 'player';
+        const outcome = crisis.rejoin(body.code, body.playerId, body.token, role);
+        const member = role === 'spectator' ? outcome.spectator : outcome.player;
+        return {
+          code: outcome.room.code,
+          playerId: member.id,
+          token: member.token,
+          role,
+          name: member.name,
+          state: crisis.view(outcome.room, member.id, role),
+        };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/crisis/leave') {
+      await handleAction(req, res, async (body) => {
+        const outcome = crisis.leave(body.code, body.playerId, body.token);
+        return { ok: true, deleted: outcome.deleted };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/crisis/spectate/leave') {
+      await handleAction(req, res, async (body) => {
+        crisis.leaveSpectator(body.code, body.playerId, body.token);
+        return { ok: true };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/crisis/start') {
+      await handleAction(req, res, async (body) => {
+        const { room } = crisis.start(body.code, body.playerId, body.token);
+        return { ok: true, state: crisis.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/crisis/proposal') {
+      await handleAction(req, res, async (body) => {
+        const { room } = crisis.submitProposal(
+          body.code,
+          body.playerId,
+          body.token,
+          body,
+        );
+        return { ok: true, state: crisis.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/crisis/vote') {
+      await handleAction(req, res, async (body) => {
+        const { room } = crisis.submitVote(
+          body.code,
+          body.playerId,
+          body.token,
+          body.targetId,
+        );
+        return { ok: true, state: crisis.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/crisis/rating') {
+      await handleAction(req, res, async (body) => {
+        const { room } = crisis.submitRating(
+          body.code,
+          body.playerId,
+          body.token,
+          body.targetId,
+          body.rating,
+        );
+        return { ok: true, state: crisis.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/crisis/next') {
+      await handleAction(req, res, async (body) => {
+        const { room } = crisis.nextRound(body.code, body.playerId, body.token);
+        return { ok: true, state: crisis.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/crisis/restart') {
+      await handleAction(req, res, async (body) => {
+        const { room } = crisis.restart(body.code, body.playerId, body.token);
+        return { ok: true, state: crisis.view(room, body.playerId) };
+      });
+      return;
+    }
+
     if (req.method === 'GET' || req.method === 'HEAD') {
       await serveStatic(req, res, url.pathname);
       return;
@@ -803,6 +965,13 @@ function createApp(options = {}) {
     for (const room of guess.rooms.values()) {
       if (room.phase === 'question' && room.phaseEndsAt && Date.now() >= room.phaseEndsAt) {
         guess.finishQuestions(room);
+      }
+    }
+    for (const room of crisis.rooms.values()) {
+      if (room.phase === 'writing' && room.phaseEndsAt && Date.now() >= room.phaseEndsAt) {
+        crisis.finishWriting(room);
+      } else if (room.phase === 'voting' && room.phaseEndsAt && Date.now() >= room.phaseEndsAt) {
+        crisis.finishVoting(room);
       }
     }
   }, 200);
