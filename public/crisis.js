@@ -252,7 +252,7 @@ function landingMarkup() {
       </section>
       <section class="crisis-rules">
         <article><span>01 / CRISIS</span><h3>发危机</h3><p>每轮一张公共危机卡，所有人看到的信息一样。</p></article>
-        <article><span>02 / PROPOSE</span><h3>写提案</h3><p>一句话回应、正式声明、补救行动，90 秒。</p></article>
+        <article><span>02 / PROPOSE</span><h3>写提案</h3><p>一句话回应、正式声明、补救行动，不限时。</p></article>
         <article><span>03 / VOTE</span><h3>匿名投票</h3><p>3 人以上投别人；2 人局互评三项。</p></article>
         <article><span>04 / SCORE</span><h3>三轮结算</h3><p>每轮累计分数，3 轮后最高者胜出。</p></article>
       </section>
@@ -324,7 +324,7 @@ function lobbyMarkup(room) {
         </section>
         <aside class="crisis-side">
           ${inviteMarkup(room)}
-          <section class="crisis-mini-rules"><p class="eyebrow">HOW / 一轮怎么走</p><ul><li><b>90 秒</b> 写三部分提案</li><li><b>匿名</b> 亮出所有提案</li><li><b>3 人以上</b> 投别人一票</li><li><b>2 人</b> 互评三项 1–5 分</li></ul></section>
+          <section class="crisis-mini-rules"><p class="eyebrow">HOW / 一轮怎么走</p><ul><li><b>不限时</b> 写三部分提案</li><li><b>全部提交</b> 后匿名亮出</li><li><b>3 人以上</b> 投别人一票</li><li><b>2 人</b> 互评三项 1–5 分</li></ul></section>
         </aside>
       </div>
     </main>
@@ -332,8 +332,23 @@ function lobbyMarkup(room) {
   </div>`;
 }
 
-function timerMarkup(room) {
-  return `<div class="crisis-timer"><span>TIME LEFT</span><b data-crisis-countdown>—</b><em>SECONDS</em></div>`;
+function progressMarkup(room, mode) {
+  const isWriting = mode === 'writing';
+  const count = isWriting ? room.submittedCount : room.votedCount;
+  const label = isWriting ? '提案进度' : room.ratingMode ? '互评进度' : '投票进度';
+  return `<section class="crisis-status-card">
+    <div class="crisis-panel-head"><h2>${label}</h2><span>${count} / ${room.players.length}</span></div>
+    <div class="crisis-status-list">
+      ${room.players
+        .map((player) => {
+          const done = isWriting ? player.submitted : player.voted;
+          const waiting = isWriting ? '写提案中' : room.ratingMode ? '待互评' : '待投票';
+          return `<div class="crisis-status-item"><span>${esc(player.name)}${player.isYou ? ' · 你' : ''}</span><b class="${done ? 'done' : ''}">${done ? (isWriting ? '已提交' : '已完成') : waiting}</b></div>`;
+        })
+        .join('')}
+    </div>
+    ${room.viewer.isSpectator ? '<p class="crisis-form-tip">观战视角：可以看进度，不能操作。</p>' : ''}
+  </section>`;
 }
 
 function writingMarkup(room) {
@@ -345,10 +360,10 @@ function writingMarkup(room) {
     <main class="crisis-page" id="main">
       <div class="crisis-round-line"><span>ROUND ${room.round} / ${room.totalRounds}</span><i></i><span>${isSpectator ? '观战' : submitted ? '已提交' : '写提案中'}</span></div>
       <div class="crisis-page-head">
-        <div><p class="eyebrow">PROPOSE / 写提案</p><h1 class="crisis-title">先处理，<br /><span>再解释。</span></h1><p class="crisis-sub">${isSpectator ? '你在观战。玩家提交后，所有提案会匿名展示。' : '一句话回应、正式声明、补救行动。90 秒后自动提交已填写的内容。'}</p></div>
-        ${timerMarkup(room)}
+        <div><p class="eyebrow">PROPOSE / 写提案</p><h1 class="crisis-title">先处理，<br /><span>再解释。</span></h1><p class="crisis-sub">${isSpectator ? '你在观战。玩家提交后，所有提案会匿名展示。' : '一句话回应、正式声明、补救行动。不限时，全部提交后自动进入匿名投票。'}</p></div>
       </div>
       ${crisisCard(room.crisis)}
+      ${progressMarkup(room, 'writing')}
       ${isSpectator ? `<section class="crisis-wait-card"><h2>看他们怎么处理</h2><p>所有提案提交后，会匿名展示，然后进入投票。</p></section>` : submitted ? `<section class="crisis-wait-card"><h2>提案已提交</h2><p>等其他人写完，所有方案会匿名亮出。</p></section>` : `<section class="crisis-proposal-form">
         <div class="crisis-panel-head"><h2>你的提案</h2><span>${room.players.length} 家公关团队</span></div>
         <label class="field"><span class="field-label"><span>一句话回应</span><span>最多 30 字</span></span><input class="text-input headline-input" id="crisis-headline" maxlength="30" value="${esc(C.headline)}" placeholder="比如：先停业，再给所有人一个交代。" /></label>
@@ -373,10 +388,10 @@ function votingMarkup(room) {
     <main class="crisis-page" id="main">
       <div class="crisis-round-line"><span>ROUND ${room.round} / ${room.totalRounds}</span><i></i><span>${isSpectator ? '观战' : viewer.voted ? '已完成' : ratingMode ? '互评中' : '投票中'}</span></div>
       <div class="crisis-page-head">
-        <div><p class="eyebrow">${ratingMode ? 'RATING / 互相评分' : 'VOTE / 匿名投票'}</p><h1 class="crisis-title">${ratingMode ? '给对方的三项，<br /><span>各打 1–5 分。</span>' : '哪份提案，<br /><span>你最想执行？</span>'}</h1><p class="crisis-sub">${isSpectator ? '你在观战。投票结束后会公布作者和得分。' : ratingMode ? '不能给自己打分。三项分数会相加，成为对方本轮得分。' : '不能投自己。每人一票，票数就是本轮得分。'}</p></div>
-        ${timerMarkup(room)}
+        <div><p class="eyebrow">${ratingMode ? 'RATING / 互相评分' : 'VOTE / 匿名投票'}</p><h1 class="crisis-title">${ratingMode ? '给对方的三项，<br /><span>各打 1–5 分。</span>' : '哪份提案，<br /><span>你最想执行？</span>'}</h1><p class="crisis-sub">${isSpectator ? '你在观战。所有人提交后公布作者和得分。' : ratingMode ? '不能给自己打分。三项分数相加，成为对方本轮得分；不限时。' : '不能投自己。每人一票，票数就是本轮得分；不限时。'}</p></div>
       </div>
       ${crisisCard(room.crisis)}
+      ${progressMarkup(room, 'voting')}
       <div class="crisis-proposals">${proposals.map((proposal) => proposalMarkup(proposal, room)).join('')}</div>
       ${!isSpectator && !viewer.voted && ratingMode ? `<button class="btn btn-primary crisis-wide" data-action="crisis-submit-rating" ${C.busy ? 'disabled' : ''}>${C.busy ? '正在提交…' : '提交互评'}</button>` : ''}
       ${!isSpectator && viewer.voted ? '<p class="crisis-form-tip" style="text-align:center;margin-top:16px">已提交，等其他人…</p>' : ''}

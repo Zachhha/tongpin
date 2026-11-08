@@ -967,13 +967,6 @@ function createApp(options = {}) {
         guess.finishQuestions(room);
       }
     }
-    for (const room of crisis.rooms.values()) {
-      if (room.phase === 'writing' && room.phaseEndsAt && Date.now() >= room.phaseEndsAt) {
-        crisis.finishWriting(room);
-      } else if (room.phase === 'voting' && room.phaseEndsAt && Date.now() >= room.phaseEndsAt) {
-        crisis.finishVoting(room);
-      }
-    }
   }, 200);
 
   const cleanupSweep = setInterval(() => {

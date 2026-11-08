@@ -810,3 +810,49 @@
   .crisis-export-row span { display: block; margin-top: 6px; }
   .crisis-foot { font-size: 7px; }
 }
+
+.crisis-status-card {
+  margin: 0 0 18px;
+  padding: 15px 17px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 13px;
+  background: rgba(251, 255, 254, 0.62);
+}
+
+.crisis-status-list {
+  display: grid;
+  gap: 5px;
+}
+
+.crisis-status-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  border-top: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.crisis-status-item:first-child {
+  border-top: 0;
+}
+
+.crisis-status-item b {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 500;
+}
+
+.crisis-status-item b.done {
+  color: var(--red);
+  font-weight: 700;
+}
+
+@media (max-width: 660px) {
+  .crisis-status-card {
+    padding: 12px 13px;
+  }
+}
