@@ -912,3 +912,33 @@
     box-shadow: 4px 4px 0 #c9372c;
   }
 }
+
+.crisis-reroll-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: -7px 0 17px;
+}
+
+.crisis-reroll-row .btn {
+  min-height: 34px;
+  font-size: 9px;
+}
+
+.crisis-reroll-row span {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+@media (max-width: 660px) {
+  .crisis-reroll-row {
+    display: block;
+    text-align: right;
+  }
+
+  .crisis-reroll-row span {
+    display: block;
+    margin-top: 5px;
+  }
+}

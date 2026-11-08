@@ -357,6 +357,7 @@ function writingMarkup(room) {
         <div><p class="eyebrow">PROPOSE / 写提案</p><h1 class="crisis-title">先处理，<br /><span>再解释。</span></h1><p class="crisis-sub">${isSpectator ? '你在观战。玩家提交后，所有提案会匿名展示。' : '用一段话写你的公关方案。不限时，全部提交后自动进入匿名投票。'}</p></div>
       </div>
       ${crisisCard(room.crisis)}
+      ${room.canReroll ? `<div class="crisis-reroll-row"><button class="btn btn-soft" data-action="crisis-reroll">换一个危机</button><span>还没人提交，可以继续换</span></div>` : ''}
       ${progressMarkup(room, 'writing')}
       ${isSpectator ? `<section class="crisis-wait-card"><h2>看他们怎么处理</h2><p>所有提案提交后，会匿名展示，然后进入投票。</p></section>` : submitted ? `<section class="crisis-wait-card"><h2>提案已提交</h2><p>等其他人写完，所有方案会匿名亮出。</p></section>` : `<section class="crisis-proposal-form">
         <div class="crisis-panel-head"><h2>你的提案</h2><span>${room.players.length} 家公关团队</span></div>
@@ -541,26 +542,69 @@ function fallbackCopy(text, done) {
   }
 }
 
+function indentBlock(value, prefix = '     ') {
+  return String(value || '（空）')
+    .split('\n')
+    .map((line) => `${prefix}${line}`)
+    .join('\n');
+}
+
 function buildExport(room) {
-  const lines = ['危机公关 · 对局记录', `房间：${room.code}`, ''];
+  const rule = '────────────────────────────';
+  const lines = [
+    '危机公关 · 对局记录',
+    '════════════════════════════',
+    `房间：${room.code}`,
+    `已完成：${room.history.length} / ${room.totalRounds} 轮`,
+    `导出时间：${new Date().toLocaleString('zh-CN', { hour12: false })}`,
+    '════════════════════════════',
+  ];
+
   for (const result of room.history) {
-    lines.push(`第 ${result.round} 轮`);
-    lines.push(`危机：${result.crisis.title}`);
-    for (const fact of result.crisis.facts) lines.push(`  - ${fact}`);
-    lines.push('提案：');
-    for (const entry of result.entries) {
-      lines.push(`- ${entry.name}`);
-      lines.push(`  提案：${entry.proposal.text}`);
-      if (result.ratingMode && entry.rating) {
-        lines.push(`  互评：可信 ${entry.rating.credibility} / 执行 ${entry.rating.execution} / 创意 ${entry.rating.creativity}，本轮 ${entry.points} 分`);
-      } else {
-        lines.push(`  得票：${entry.votes} 票，本轮 ${entry.points} 分`);
-      }
-    }
     lines.push('');
+    lines.push(`【第 ${result.round} 轮】`);
+    lines.push(`危机：${result.crisis.title}`);
+    lines.push(`热度：${result.crisis.heat}`);
+    lines.push('事实：');
+    result.crisis.facts.forEach((fact, index) => {
+      lines.push(`  ${index + 1}. ${fact}`);
+    });
+
+    lines.push('');
+    lines.push('提案：');
+    result.entries.forEach((entry, index) => {
+      lines.push(rule);
+      lines.push(`${index + 1}. ${entry.name}`);
+      lines.push('   提案：');
+      lines.push(indentBlock(entry.proposal.text));
+      if (result.ratingMode) {
+        const rating = entry.rating;
+        lines.push(
+          rating
+            ? `   互评：可信 ${rating.credibility} / 执行 ${rating.execution} / 创意 ${rating.creativity} → 本轮 ${entry.points} 分`
+            : '   互评：未提交',
+        );
+      } else {
+        lines.push(`   得票：${entry.votes} 票 → 本轮 ${entry.points} 分`);
+      }
+    });
+
+    lines.push(rule);
+    lines.push('本轮排名：');
+    [...result.entries]
+      .sort((a, b) => b.points - a.points)
+      .forEach((entry, index) => {
+        lines.push(`  ${index + 1}. ${entry.name} — ${entry.points} 分`);
+      });
   }
-  lines.push('累计：');
-  for (const score of room.scores) lines.push(`- ${score.name}：${score.score} 分`);
+
+  lines.push('');
+  lines.push('════════════════════════════');
+  lines.push(room.history.some((result) => result.isFinal) ? '最终排名' : '当前累计');
+  lines.push('════════════════════════════');
+  room.scores.forEach((score, index) => {
+    lines.push(`${index + 1}. ${score.name} — ${score.score} 分`);
+  });
   return lines.join('\n');
 }
 
@@ -609,6 +653,9 @@ document.addEventListener('click', (event) => {
   } else if (actionName === 'crisis-start') {
     event.preventDefault();
     action('/api/crisis/start', {});
+  } else if (actionName === 'crisis-reroll') {
+    event.preventDefault();
+    action('/api/crisis/reroll', {});
   } else if (actionName === 'crisis-submit-proposal') {
     event.preventDefault();
     action('/api/crisis/proposal', { text: C.proposalText });

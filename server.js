@@ -876,6 +876,14 @@ function createApp(options = {}) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/crisis/reroll') {
+      await handleAction(req, res, async (body) => {
+        const { room } = crisis.rerollCrisis(body.code, body.playerId, body.token);
+        return { ok: true, state: crisis.view(room, body.playerId) };
+      });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/crisis/proposal') {
       await handleAction(req, res, async (body) => {
         const { room } = crisis.submitProposal(
