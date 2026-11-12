@@ -18,7 +18,7 @@ const P = {
   order: [],
   used: [],
   orderKey: '',
-  sentence: '',
+  gaps: [],
   promptInput: '',
   clockOffset: 0,
   lastSig: null,
@@ -92,7 +92,7 @@ function resetInputs() {
   P.order = [];
   P.used = [];
   P.orderKey = '';
-  P.sentence = '';
+  P.gaps = [];
   P.promptInput = '';
 }
 
@@ -134,7 +134,7 @@ function applyState(state) {
     P.order = [];
     P.used = [];
     P.orderKey = '';
-    P.sentence = '';
+    P.gaps = [];
     P.promptInput = '';
   }
   if (state.phase === 'writing' && state.variant === 'acrostic' && P.lines.length !== Array.from(state.prompt || '').length) {
@@ -147,7 +147,7 @@ function applyState(state) {
       P.order = chars.map(() => null);
       P.used = [];
       P.orderKey = key;
-      P.sentence = '';
+      P.gaps = chars.slice(0, -1).map(() => '');
     }
   }
   render();
@@ -212,7 +212,7 @@ function invite(room) {
 function inviteUrl(code) { return `${location.origin}/poem?room=${encodeURIComponent(code)}`; }
 function watchUrl(code) { return `${location.origin}/poem?room=${encodeURIComponent(code)}&watch=1`; }
 function shareText(code) {
-  return `大文豪对局\n房间码：${code}\n${inviteUrl(code)}\n\n观战席\n房间码：${code}\n${watchUrl(code)}`;
+  return `🖋️ 大文豪对局\n房间码：${code}\n${inviteUrl(code)}\n\n👀 观战席\n房间码：${code}\n${watchUrl(code)}`;
 }
 
 function landing() {
@@ -368,23 +368,37 @@ function sentenceMarkup(room) {
     P.order = chars.map(() => null);
     P.used = [];
     P.orderKey = key;
-    P.sentence = '';
+    P.gaps = chars.slice(0, -1).map(() => '');
   }
-  const complete = P.order.every(Boolean);
+  if (P.gaps.length !== chars.length - 1) P.gaps = chars.slice(0, -1).map(() => '');
+  const complete = P.order.every(Boolean) && P.gaps.every((gap) => gap.trim());
+  const preview = P.order
+    .map((char, index) => (char ? `${char}${P.gaps[index] || ''}` : ''))
+    .join('');
   return `<div class="poem-shell">
     ${header(room)}
     <main class="poem-page" id="main">
       <div class="poem-page-head">
-        <div><p class="eyebrow">SENTENCE / 首尾造句</p><h1 class="poem-title">这组字，<br /><em>你说了算。</em></h1><p class="poem-sub">按顺序点下面的字，让它依次进入空框。点已经放进框里的字，所有字会退回来重排。不限时。</p></div>
+        <div><p class="eyebrow">SENTENCE / 首尾造句</p><h1 class="poem-title">这组字，<br /><em>你说了算。</em></h1><p class="poem-sub">先把下面的字按顺序点进上方空方框，再在两个方框之间的输入框里补中间内容。点已填入方框的字，所有字会退回重排。不限时。</p></div>
       </div>
       <div class="poem-paper"><p class="eyebrow">CHARS / 本组字</p><h2>${chars.map(esc).join(' · ')}</h2><div class="poem-big-prompt">${chars.map((char) => `<span>${esc(char)}</span>`).join('')}</div></div>
       ${progress(room, 'writing')}
       ${viewer.isSpectator ? `<section class="poem-wait"><h2>看他们怎么排</h2><p>所有人提交后匿名展示，再投票。</p></section>` : viewer.submitted ? `<section class="poem-wait"><h2>句子已交</h2><p>等其他人排完，随后匿名展示。</p></section>` : `<section class="poem-form">
-        <div class="poem-panel-head"><h2>排位 + 造句</h2><span>${chars.length} 个位置</span></div>
-        <div class="poem-slots">${P.order.map((char, index) => `<button class="poem-slot${char ? ' filled' : ''}" data-action="${char ? 'poem-reset-order' : ''}" aria-label="${esc(labels[index])}${char ? `：${esc(char)}` : '空框'}"><span class="poem-slot-label">${esc(labels[index])}</span><b>${char ? esc(char) : ''}</b></button>`).join('')}</div>
-        <div class="poem-chips">${chars.map((char, index) => `<button class="poem-chip${P.used.includes(index) ? ' used' : ''}" data-action="poem-place-char" data-index="${index}" ${P.used.includes(index) ? 'disabled' : ''}>${esc(char)}</button>`).join('')}</div>
-        <label class="field"><span class="field-label"><span>补成一句话</span><span>最多 120 字</span></span><textarea class="text-input poem-sentence-input" id="poem-sentence" maxlength="120" rows="3" placeholder="把这组字放在你排的位置上，补成一句像样的话。">${esc(P.sentence)}</textarea></label>
-        <p class="poem-form-tip">先点字上框，再补中间内容；点框里的字可以全部退回。</p>
+        <div class="poem-panel-head"><h2>排位 + 造句</h2><span>${chars.length} 个字 / ${chars.length - 1} 段中间内容</span></div>
+        <div class="poem-sentence-board">
+          <div class="poem-sentence-picker">
+            <div class="poem-sentence-sequence">
+              ${chars.map((char, index) => `<button class="poem-char-slot${P.order[index] ? ' filled' : ''}" data-action="${P.order[index] ? 'poem-reset-order' : ''}" aria-label="${esc(labels[index])}${P.order[index] ? `：${esc(P.order[index])}` : '空方框'}"><span class="poem-char-slot-label">${esc(labels[index])}</span><b>${P.order[index] ? esc(P.order[index]) : ''}</b><i></i></button>${index < chars.length - 1 ? `<input class="poem-gap-input" data-poem-gap="${index}" maxlength="40" value="${esc(P.gaps[index] || '')}" placeholder="中间内容" />` : ''}`).join('')}
+            </div>
+            <div class="poem-source-row">${chars.map((char, index) => `<button class="poem-source-chip${P.used.includes(index) ? ' used' : ''}" data-action="poem-place-char" data-index="${index}" ${P.used.includes(index) ? 'disabled' : ''}>${esc(char)}</button>`).join('')}</div>
+            <p class="poem-sentence-preview">${preview ? esc(preview) : '按顺序点字，再补中间内容'}</p>
+          </div>
+          <aside class="poem-sentence-guide">
+            <p><b>①</b><span>先按顺序点下面的字，让它们依次进入上方空方框。</span></p>
+            <p><b>②</b><span>再在方框之间的两个输入框里补中间内容，组成一句话。</span></p>
+          </aside>
+        </div>
+        <p class="poem-form-tip">先排字，再补内容；点已填入方框的字可以全部退回。</p>
         <button class="btn btn-primary" data-action="poem-submit-sentence" ${P.busy || !complete ? 'disabled' : ''}>${P.busy ? '正在落笔…' : '交出这句话'}</button>
       </section>`}
       ${restart(room)}
@@ -585,7 +599,9 @@ document.addEventListener('input', (event) => {
   if (event.target.id === 'poem-name') P.name = event.target.value;
   if (event.target.id === 'poem-code') P.code = event.target.value.toUpperCase();
   if (event.target.id === 'poem-char') P.char = event.target.value.slice(0, 1);
-  if (event.target.id === 'poem-sentence') P.sentence = event.target.value.slice(0, 120);
+  if (event.target.dataset.poemGap !== undefined) {
+    P.gaps[Number(event.target.dataset.poemGap)] = event.target.value.slice(0, 40);
+  }
   if (event.target.id === 'poem-next-prompt') P.promptInput = event.target.value.slice(0, 4);
   if (event.target.dataset.poemLine !== undefined) {
     P.lines[Number(event.target.dataset.poemLine)] = event.target.value.slice(0, 36);
@@ -640,7 +656,12 @@ document.addEventListener('click', (event) => {
       showToast('先把所有字放进方框。');
       return;
     }
-    action('/api/poem/submit', { variant: 'sentence', order: [...P.order], text: P.sentence });
+    if (P.gaps.some((gap) => !gap.trim())) {
+      showToast('把中间内容也补上。');
+      return;
+    }
+    const sentence = P.order.map((char, index) => `${char}${P.gaps[index] || ''}`).join('');
+    action('/api/poem/submit', { variant: 'sentence', order: [...P.order], text: sentence });
   } else if (name === 'poem-vote') {
     event.preventDefault();
     action('/api/poem/vote', { targetId: target.dataset.id });

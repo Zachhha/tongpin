@@ -1,4 +1,4 @@
-.poem-body {
+﻿.poem-body {
   --ink: #1c1a15;
   --ink-soft: #4b463c;
   --muted: #7b7364;
@@ -492,7 +492,7 @@
 }
 
 .poem-paper::after {
-  content: "墨";
+  content: "澧?;
   position: absolute;
   right: 15px;
   bottom: 8px;
@@ -1182,4 +1182,419 @@
 
 .poem-body::before {
   opacity: 0.9;
+}
+
+/* Sentence layout: characters above, blank underline inputs below */
+.poem-source-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin: 4px 0 22px;
+}
+
+.poem-source-chip {
+  width: 54px;
+  height: 54px;
+  border: 1.5px solid #111;
+  background: #fffefb;
+  color: #111;
+  font-family: var(--serif);
+  font-size: 27px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.14);
+}
+
+.poem-source-chip.used {
+  opacity: 0.18;
+  cursor: default;
+  box-shadow: none;
+}
+
+.poem-blank-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 14px;
+  margin: 0 0 18px;
+}
+
+.poem-blank {
+  position: relative;
+  width: 122px;
+  height: 58px;
+  padding: 0 8px 7px;
+  border: 1px solid #b7b7b1;
+  border-bottom: 2px solid #111;
+  background: rgba(255, 254, 251, 0.72);
+  color: #111;
+  cursor: default;
+}
+
+.poem-blank.filled {
+  background: #f1f1ed;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.poem-blank b {
+  display: block;
+  color: #111;
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.poem-blank i {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 10px;
+  height: 1px;
+  background: #cfcfc9;
+}
+
+.poem-blank-label {
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  color: #898983;
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 660px) {
+  .poem-source-chip {
+    width: 47px;
+    height: 47px;
+    font-size: 23px;
+  }
+
+  .poem-blank {
+    width: 92px;
+    height: 52px;
+  }
+
+  .poem-blank b {
+    font-size: 22px;
+  }
+
+  .poem-blank-row {
+    gap: 8px;
+  }
+}
+
+.poem-sentence-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 205px;
+  gap: 20px;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.poem-sentence-picker {
+  min-width: 0;
+}
+
+.poem-sentence-board .poem-blank-row {
+  margin-bottom: 14px;
+}
+
+.poem-sentence-board .poem-source-row {
+  margin: 0;
+}
+
+.poem-sentence-guide {
+  padding: 11px 13px;
+  border-left: 2px solid #111;
+  background: rgba(17, 17, 17, 0.035);
+}
+
+.poem-sentence-guide p {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0;
+  color: #555550;
+  font-size: 9px;
+  line-height: 1.65;
+}
+
+.poem-sentence-guide p + p {
+  margin-top: 8px;
+}
+
+.poem-sentence-guide b {
+  flex: 0 0 auto;
+  color: #111;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+@media (max-width: 660px) {
+  .poem-sentence-board {
+    grid-template-columns: 1fr;
+    gap: 13px;
+  }
+
+  .poem-sentence-guide {
+    border-left: 0;
+    border-top: 1px solid #c9c9c3;
+    padding: 9px 0 0;
+    background: none;
+  }
+}
+
+/* Strict monochrome paper for 澶ф枃璞?*/
+body.poem-body {
+  --paper: #f2f2f2;
+  --paper-2: #ffffff;
+  --paper-3: #e6e6e6;
+  --ink: #0f0f0f;
+  --ink-soft: #333333;
+  --muted: #6f6f6f;
+  --line: #d2d2d2;
+  --line-strong: #999999;
+  --seal: #111111;
+  --seal-soft: #e5e5e5;
+  background: #f2f2f2;
+}
+
+body.poem-body .poem-paper {
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.035) 1px, transparent 1px) 0 0 / 100% 31px,
+    #ffffff;
+}
+
+body.poem-body .poem-blank,
+body.poem-body .poem-source-chip,
+body.poem-body .poem-slot,
+body.poem-body .poem-chip {
+  background: #ffffff;
+}
+
+body.poem-body .poem-card.is-you {
+  background: #f1f1f1;
+}
+
+body.poem-body .poem-invite {
+  background: #141414;
+}
+
+/* Real brush-ink artwork */
+.poem-body::before {
+  background:
+    url('/ink-wash.png') left top / 38% auto no-repeat,
+    url('/ink-wash.png') right bottom / 34% auto no-repeat;
+  opacity: 0.32;
+  filter: grayscale(1) contrast(1.08);
+  mix-blend-mode: multiply;
+}
+
+.poem-body::after {
+  background:
+    radial-gradient(circle at 73% 18%, rgba(0, 0, 0, 0.5) 0 1.2px, transparent 2.6px),
+    radial-gradient(circle at 76% 21%, rgba(0, 0, 0, 0.35) 0 1px, transparent 2.2px),
+    radial-gradient(circle at 91% 7%, rgba(0, 0, 0, 0.3) 0 1px, transparent 2.4px);
+  opacity: 0.5;
+}
+
+.poem-hero::before {
+  left: -6%;
+  bottom: 3%;
+  width: 300px;
+  height: 125px;
+  border-radius: 0;
+  background: url('/ink-splatter.png') left center / contain no-repeat;
+  opacity: 0.24;
+  filter: grayscale(1) contrast(1.1);
+  transform: rotate(-3deg);
+  mix-blend-mode: multiply;
+}
+
+.poem-hero::after {
+  right: 0;
+  top: -1%;
+  width: 255px;
+  height: 255px;
+  border-radius: 0;
+  background: url('/ink-ring.png') center / contain no-repeat;
+  opacity: 0.16;
+  filter: grayscale(1) contrast(1.12);
+  transform: rotate(8deg);
+  mix-blend-mode: multiply;
+}
+
+.poem-paper::before {
+  right: -30px;
+  top: -28px;
+  width: 180px;
+  height: 125px;
+  border-radius: 0;
+  background: url('/ink-drip.png') center / contain no-repeat;
+  opacity: 0.3;
+  filter: grayscale(1);
+  transform: rotate(-4deg);
+}
+
+.poem-invite {
+  position: relative;
+  overflow: hidden;
+}
+
+.poem-invite::after {
+  content: "";
+  position: absolute;
+  right: -38px;
+  bottom: -62px;
+  width: 190px;
+  height: 190px;
+  border-radius: 0;
+  background: url('/ink-ring.png') center / contain no-repeat;
+  opacity: 0.18;
+  filter: grayscale(1);
+  transform: rotate(-12deg);
+  pointer-events: none;
+}
+
+.poem-invite > * {
+  position: relative;
+  z-index: 1;
+}
+
+.poem-page-head {
+  position: relative;
+}
+
+.poem-page-head::after {
+  content: "";
+  position: absolute;
+  right: 2%;
+  top: 0;
+  width: 150px;
+  height: 90px;
+  background: url('/ink-blot.png') center / contain no-repeat;
+  opacity: 0.12;
+  filter: grayscale(1);
+  pointer-events: none;
+}
+
+
+/* Remove the large wash texture that still carried a baked checkerboard. */
+.poem-body::before {
+  background: none;
+  opacity: 0;
+}
+
+/* 空方框 + 输入框交替 */
+.poem-sentence-sequence {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  overflow-x: auto;
+  padding: 2px 0 8px;
+}
+
+.poem-char-slot {
+  position: relative;
+  width: 60px;
+  height: 58px;
+  flex: 0 0 60px;
+  padding: 0 4px 7px;
+  border: 1px solid #9d9d97;
+  border-bottom: 2px solid #111;
+  background: #fff;
+  color: #111;
+  cursor: default;
+}
+
+.poem-char-slot.filled {
+  cursor: pointer;
+  background: #f1f1ed;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.poem-char-slot b {
+  display: block;
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.poem-char-slot i {
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  bottom: 10px;
+  height: 1px;
+  background: #cfcfc9;
+}
+
+.poem-char-slot-label {
+  position: absolute;
+  left: 5px;
+  top: 3px;
+  color: #898983;
+  font-family: var(--mono);
+  font-size: 7px;
+}
+
+.poem-gap-input {
+  width: 100%;
+  min-width: 72px;
+  height: 40px;
+  flex: 1 1 85px;
+  margin: 0 4px;
+  padding: 5px 7px;
+  border: 1px solid #111;
+  background: #fff;
+  color: #111;
+  font-family: var(--serif);
+  font-size: 14px;
+  text-align: center;
+  outline: none;
+}
+
+.poem-gap-input::placeholder {
+  color: #9a9a94;
+  font-size: 9px;
+}
+
+.poem-gap-input:focus {
+  border-color: #111;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.12);
+}
+
+.poem-sentence-preview {
+  min-height: 22px;
+  margin: 8px 0 0;
+  color: #777771;
+  font-family: var(--serif);
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 660px) {
+  .poem-char-slot {
+    width: 50px;
+    height: 51px;
+    flex-basis: 50px;
+  }
+
+  .poem-char-slot b {
+    font-size: 22px;
+  }
+
+  .poem-gap-input {
+    min-width: 52px;
+    flex-basis: 58px;
+    margin: 0 2px;
+    font-size: 12px;
+  }
 }

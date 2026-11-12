@@ -39,6 +39,11 @@ const STATIC_FILES = new Map([
   ['/poem.html', ['poem.html', 'text/html; charset=utf-8']],
   ['/poem.css', ['poem.css', 'text/css; charset=utf-8']],
   ['/poem.js', ['poem.js', 'text/javascript; charset=utf-8']],
+  ['/ink-ring.png', ['ink-ring.png', 'image/png']],
+  ['/ink-splatter.png', ['ink-splatter.png', 'image/png']],
+  ['/ink-drip.png', ['ink-drip.png', 'image/png']],
+  ['/ink-blot.png', ['ink-blot.png', 'image/png']],
+  ['/ink-wash.png', ['ink-wash.png', 'image/png']],
 ]);
 
 function sendJson(res, status, payload) {
