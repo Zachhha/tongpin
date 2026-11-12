@@ -865,3 +865,321 @@
   padding-left: 18px;
   padding-right: 18px;
 }
+
+/* Black / white / grey ink-wash theme */
+.poem-body {
+  --paper: #f2f2ef;
+  --paper-2: #fbfbf9;
+  --paper-3: #e6e6e1;
+  --ink: #111111;
+  --ink-soft: #333330;
+  --muted: #6f6f69;
+  --line: #d2d2cc;
+  --line-strong: #979791;
+  --seal: #171717;
+  --seal-soft: #e4e4df;
+  background:
+    radial-gradient(ellipse at 12% 8%, rgba(0, 0, 0, 0.12), transparent 28%),
+    radial-gradient(ellipse at 88% 86%, rgba(0, 0, 0, 0.1), transparent 30%),
+    var(--paper);
+}
+
+.poem-body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 16% 7% at 84% 12%, rgba(0, 0, 0, 0.16), transparent 70%),
+    radial-gradient(ellipse 9% 4% at 91% 17%, rgba(0, 0, 0, 0.1), transparent 72%),
+    radial-gradient(ellipse 12% 5% at 8% 74%, rgba(0, 0, 0, 0.1), transparent 75%),
+    radial-gradient(circle at 14% 30%, rgba(0, 0, 0, 0.25) 0 1px, transparent 2px),
+    radial-gradient(circle at 84% 9%, rgba(0, 0, 0, 0.22) 0 1.5px, transparent 3px),
+    radial-gradient(circle at 8% 71%, rgba(0, 0, 0, 0.18) 0 1px, transparent 2px);
+  filter: blur(0.6px);
+  mix-blend-mode: multiply;
+}
+
+.poem-hero {
+  position: relative;
+}
+
+.poem-hero::after {
+  content: "";
+  position: absolute;
+  right: 4%;
+  top: 2%;
+  width: 190px;
+  height: 115px;
+  z-index: -1;
+  border-radius: 58% 42% 63% 37% / 45% 59% 41% 55%;
+  background: radial-gradient(ellipse at 40% 50%, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.03) 64%, transparent 72%);
+  filter: blur(7px);
+  transform: rotate(-8deg);
+}
+
+.poem-paper {
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.035) 1px, transparent 1px) 0 0 / 100% 31px,
+    var(--paper-2);
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.12);
+}
+
+.poem-paper::before {
+  content: "";
+  position: absolute;
+  right: -26px;
+  top: -22px;
+  width: 150px;
+  height: 76px;
+  border-radius: 61% 39% 49% 51% / 48% 58% 42% 52%;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.17), transparent 68%);
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+.poem-paper::after {
+  color: rgba(0, 0, 0, 0.1);
+}
+
+.poem-seal {
+  border-color: #111;
+  color: #111;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.poem-invite {
+  background: #151515;
+  box-shadow: 6px 6px 0 #8f8f8a;
+}
+
+.poem-invite .eyebrow {
+  color: #bcbcb6;
+}
+
+.poem-variant button[aria-pressed="true"] {
+  border-color: #111;
+  background: #e3e3de;
+  box-shadow: 3px 3px 0 #111;
+}
+
+.poem-card.is-winner {
+  border-color: #111;
+  box-shadow: 4px 4px 0 #111;
+}
+
+.poem-title em,
+.poem-hero h1 em {
+  color: #4a4a45;
+}
+
+.poem-rules span,
+.poem-hero .eyebrow,
+.poem-page-head .eyebrow,
+.poem-paper .eyebrow {
+  color: #4c4c47;
+}
+
+.poem-player-state.done,
+.poem-status-item b.done,
+.poem-score-row b {
+  color: #111;
+}
+
+.poem-entry {
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.13);
+}
+
+/* Duolingo-like ordered slots */
+.poem-slots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 9px;
+  margin: 5px 0 12px;
+}
+
+.poem-slot {
+  position: relative;
+  width: 68px;
+  height: 72px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed #9d9d97;
+  background: #fffefb;
+  color: #111;
+  cursor: default;
+}
+
+.poem-slot.filled {
+  border-style: solid;
+  border-color: #111;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.16);
+}
+
+.poem-slot b {
+  font-family: var(--serif);
+  font-size: 31px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.poem-slot-label {
+  position: absolute;
+  left: 5px;
+  top: 4px;
+  color: #8a8a84;
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 0.04em;
+}
+
+.poem-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 9px;
+  margin: 0 0 16px;
+}
+
+.poem-chip {
+  width: 54px;
+  height: 54px;
+  border: 1.5px solid #111;
+  background: #fffefb;
+  color: #111;
+  font-family: var(--serif);
+  font-size: 27px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.14);
+  transition: transform 0.12s, opacity 0.12s;
+}
+
+.poem-chip:hover {
+  transform: translateY(-2px);
+}
+
+.poem-chip.used {
+  opacity: 0.18;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+}
+
+@media (max-width: 660px) {
+  .poem-slot {
+    width: 58px;
+    height: 62px;
+  }
+
+  .poem-slot b {
+    font-size: 26px;
+  }
+
+  .poem-chip {
+    width: 47px;
+    height: 47px;
+    font-size: 23px;
+  }
+
+  .poem-hero::after {
+    width: 115px;
+    height: 70px;
+    right: 5%;
+  }
+}
+
+.poem-card.is-you {
+  background: #f1f1ed;
+}
+
+.poem-hero {
+  isolation: isolate;
+}
+
+.poem-hero::after {
+  z-index: -1;
+}
+
+.poem-slot[data-action=""] {
+  cursor: default;
+}
+
+.poem-body {
+  --red: #111111;
+  --red-soft: #e4e4df;
+}
+
+.poem-body .btn-primary {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+  box-shadow: 4px 4px 0 #777;
+}
+
+.poem-body .btn-primary:hover {
+  background: #2b2b28;
+}
+
+.poem-body .btn-soft {
+  background: #e9e9e4;
+  color: #111;
+  border-color: #111;
+}
+
+.poem-body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 73% 18%, rgba(0, 0, 0, 0.5) 0 1.2px, transparent 2.6px),
+    radial-gradient(circle at 76% 21%, rgba(0, 0, 0, 0.35) 0 1px, transparent 2.2px),
+    radial-gradient(circle at 70% 23%, rgba(0, 0, 0, 0.3) 0 1.5px, transparent 3px),
+    radial-gradient(circle at 91% 7%, rgba(0, 0, 0, 0.32) 0 1px, transparent 2.4px),
+    radial-gradient(circle at 12% 58%, rgba(0, 0, 0, 0.25) 0 1px, transparent 2.2px),
+    radial-gradient(circle at 87% 73%, rgba(0, 0, 0, 0.22) 0 1.4px, transparent 2.8px);
+  opacity: 0.75;
+}
+
+.poem-hero::before {
+  content: "";
+  position: absolute;
+  left: -2%;
+  bottom: 8%;
+  width: 70%;
+  height: 10px;
+  z-index: -1;
+  border-radius: 50%;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.04) 72%, transparent);
+  transform: rotate(-1.5deg);
+  filter: blur(1.5px);
+}
+
+/* Stronger brush/ink marks */
+.poem-hero::after {
+  width: 210px;
+  height: 126px;
+  opacity: 0.8;
+  background:
+    radial-gradient(ellipse at 48% 48%, rgba(0, 0, 0, 0.42) 0 16%, rgba(0, 0, 0, 0.2) 38%, transparent 68%),
+    radial-gradient(circle at 78% 26%, rgba(0, 0, 0, 0.32) 0 1.5px, transparent 3px),
+    radial-gradient(circle at 84% 38%, rgba(0, 0, 0, 0.24) 0 1px, transparent 2.5px),
+    radial-gradient(circle at 22% 70%, rgba(0, 0, 0, 0.28) 0 2px, transparent 3.5px);
+  filter: blur(3px);
+}
+
+.poem-hero::before {
+  height: 8px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.1) 55%, transparent);
+  opacity: 0.65;
+}
+
+.poem-body::before {
+  opacity: 0.9;
+}

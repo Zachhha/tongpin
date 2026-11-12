@@ -16,6 +16,8 @@ const P = {
   lines: [],
   char: '',
   order: [],
+  used: [],
+  orderKey: '',
   sentence: '',
   promptInput: '',
   clockOffset: 0,
@@ -88,6 +90,8 @@ function resetInputs() {
   P.lines = [];
   P.char = '';
   P.order = [];
+  P.used = [];
+  P.orderKey = '';
   P.sentence = '';
   P.promptInput = '';
 }
@@ -128,6 +132,8 @@ function applyState(state) {
   if (previous && (previous.round !== state.round || (previous.phase !== 'writing' && state.phase === 'writing'))) {
     P.lines = [];
     P.order = [];
+    P.used = [];
+    P.orderKey = '';
     P.sentence = '';
     P.promptInput = '';
   }
@@ -136,7 +142,13 @@ function applyState(state) {
   }
   if (state.phase === 'writing' && state.variant === 'sentence') {
     const chars = (state.chars || []).map((item) => item.char || '？');
-    if (P.order.length !== chars.length) P.order = [...chars];
+    const key = `${state.round}:${chars.join('')}`;
+    if (P.orderKey !== key) {
+      P.order = chars.map(() => null);
+      P.used = [];
+      P.orderKey = key;
+      P.sentence = '';
+    }
   }
   render();
 }
@@ -192,12 +204,16 @@ function invite(room) {
       <button class="btn btn-outline-light" data-action="poem-copy-invite">邀请链接</button>
     </div>
     <button class="btn btn-outline-light poem-share-all" data-action="poem-copy-watch">复制观战链接</button>
+    <button class="btn btn-light poem-share-all" data-action="poem-copy-share">一键复制邀请 + 观战</button>
     <p class="poem-invite-url">${esc(inviteUrl(room.code))}</p>
   </section>`;
 }
 
 function inviteUrl(code) { return `${location.origin}/poem?room=${encodeURIComponent(code)}`; }
 function watchUrl(code) { return `${location.origin}/poem?room=${encodeURIComponent(code)}&watch=1`; }
+function shareText(code) {
+  return `大文豪对局\n房间码：${code}\n${inviteUrl(code)}\n\n观战席\n房间码：${code}\n${watchUrl(code)}`;
+}
 
 function landing() {
   const join = P.tab === 'join';
@@ -347,21 +363,29 @@ function sentenceMarkup(room) {
   const viewer = room.viewer;
   const chars = (room.chars || []).map((item) => item.char || '？');
   const labels = ['首', ...chars.slice(1, -1).map((_, index) => `句中 ${index + 1}`), '尾'];
-  if (P.order.length !== chars.length) P.order = [...chars];
+  const key = `${room.round}:${chars.join('')}`;
+  if (P.orderKey !== key) {
+    P.order = chars.map(() => null);
+    P.used = [];
+    P.orderKey = key;
+    P.sentence = '';
+  }
+  const complete = P.order.every(Boolean);
   return `<div class="poem-shell">
     ${header(room)}
     <main class="poem-page" id="main">
       <div class="poem-page-head">
-        <div><p class="eyebrow">SENTENCE / 首尾造句</p><h1 class="poem-title">这组字，<br /><em>你说了算。</em></h1><p class="poem-sub">每个人都可以把这组字排成不同顺序，再补全中间内容。位置不重复，同一个字用一次。不限时。</p></div>
+        <div><p class="eyebrow">SENTENCE / 首尾造句</p><h1 class="poem-title">这组字，<br /><em>你说了算。</em></h1><p class="poem-sub">按顺序点下面的字，让它依次进入空框。点已经放进框里的字，所有字会退回来重排。不限时。</p></div>
       </div>
       <div class="poem-paper"><p class="eyebrow">CHARS / 本组字</p><h2>${chars.map(esc).join(' · ')}</h2><div class="poem-big-prompt">${chars.map((char) => `<span>${esc(char)}</span>`).join('')}</div></div>
       ${progress(room, 'writing')}
       ${viewer.isSpectator ? `<section class="poem-wait"><h2>看他们怎么排</h2><p>所有人提交后匿名展示，再投票。</p></section>` : viewer.submitted ? `<section class="poem-wait"><h2>句子已交</h2><p>等其他人排完，随后匿名展示。</p></section>` : `<section class="poem-form">
         <div class="poem-panel-head"><h2>排位 + 造句</h2><span>${chars.length} 个位置</span></div>
-        <div class="poem-order">${labels.map((label, index) => `<label>${esc(label)}<select data-poem-order="${index}">${chars.map((char, charIndex) => `<option value="${esc(char)}" ${P.order[index] === char ? 'selected' : ''}>${esc(char)}${charIndex > -1 ? '' : ''}</option>`).join('')}</select></label>`).join('')}</div>
+        <div class="poem-slots">${P.order.map((char, index) => `<button class="poem-slot${char ? ' filled' : ''}" data-action="${char ? 'poem-reset-order' : ''}" aria-label="${esc(labels[index])}${char ? `：${esc(char)}` : '空框'}"><span class="poem-slot-label">${esc(labels[index])}</span><b>${char ? esc(char) : ''}</b></button>`).join('')}</div>
+        <div class="poem-chips">${chars.map((char, index) => `<button class="poem-chip${P.used.includes(index) ? ' used' : ''}" data-action="poem-place-char" data-index="${index}" ${P.used.includes(index) ? 'disabled' : ''}>${esc(char)}</button>`).join('')}</div>
         <label class="field"><span class="field-label"><span>补成一句话</span><span>最多 120 字</span></span><textarea class="text-input poem-sentence-input" id="poem-sentence" maxlength="120" rows="3" placeholder="把这组字放在你排的位置上，补成一句像样的话。">${esc(P.sentence)}</textarea></label>
-        <p class="poem-form-tip">位置按你选的顺序来；句子里要出现这些字。</p>
-        <button class="btn btn-primary" data-action="poem-submit-sentence" ${P.busy ? 'disabled' : ''}>${P.busy ? '正在落笔…' : '交出这句话'}</button>
+        <p class="poem-form-tip">先点字上框，再补中间内容；点框里的字可以全部退回。</p>
+        <button class="btn btn-primary" data-action="poem-submit-sentence" ${P.busy || !complete ? 'disabled' : ''}>${P.busy ? '正在落笔…' : '交出这句话'}</button>
       </section>`}
       ${restart(room)}
     </main>
@@ -432,11 +456,15 @@ function exportText(room) {
 function revealMarkup(room) {
   const result = room.result;
   const coop = Boolean(result.isCoop);
+  const nextChooser = room.players.find((item) => item.id === room.promptChooserId);
+  const coopNext = result.isFinal
+    ? '双人局不计分，只互相看作品。'
+    : `双人局不计分，下一轮轮到 ${nextChooser?.name || '对方'} 出题。`;
   return `<div class="poem-shell">
     ${header(room)}
     <main class="poem-page" id="main">
       <div class="poem-page-head">
-        <div><p class="eyebrow">${result.isFinal ? 'FINAL / 三轮结束' : 'REVEAL / 本轮揭晓'}</p><h1 class="poem-title">${coop ? '这一轮，<br /><em>看看对方怎么写。</em>' : '本轮大文豪，<br /><em>是谁？</em>'}</h1><p class="poem-sub">${coop ? '双人局不计分，只互相看作品。' : result.variant === 'acrostic' ? '本轮第一名指定下一轮藏头词。' : '房主可以开下一轮。'}</p></div>
+        <div><p class="eyebrow">${result.isFinal ? 'FINAL / 三轮结束' : 'REVEAL / 本轮揭晓'}</p><h1 class="poem-title">${coop ? '这一轮，<br /><em>看看对方怎么写。</em>' : '本轮大文豪，<br /><em>是谁？</em>'}</h1><p class="poem-sub">${coop ? coopNext : result.variant === 'acrostic' ? '本轮第一名指定下一轮藏头词。' : '房主可以开下一轮。'}</p></div>
       </div>
       <div class="poem-paper"><p class="eyebrow">${result.variant === 'acrostic' ? 'ACROSTIC / 藏头诗' : 'SENTENCE / 首尾造句'}</p><h2>${result.variant === 'acrostic' ? esc(result.prompt) : (result.chars || []).join(' · ')}</h2></div>
       <div class="poem-cards" style="margin-top:15px">${result.entries.map((item) => poemCard(item, room, true)).join('')}</div>
@@ -591,9 +619,28 @@ document.addEventListener('click', (event) => {
   } else if (name === 'poem-submit-acrostic') {
     event.preventDefault();
     action('/api/poem/submit', { variant: 'acrostic', lines: P.lines });
+  } else if (name === 'poem-place-char') {
+    event.preventDefault();
+    const chipIndex = Number(target.dataset.index);
+    const chars = (P.room?.chars || []).map((item) => item.char || '？');
+    if (!Number.isInteger(chipIndex) || !chars[chipIndex] || P.used.includes(chipIndex)) return;
+    const slot = P.order.findIndex((value) => !value);
+    if (slot < 0) return;
+    P.order[slot] = chars[chipIndex];
+    P.used.push(chipIndex);
+    render();
+  } else if (name === 'poem-reset-order') {
+    event.preventDefault();
+    P.order = P.order.map(() => null);
+    P.used = [];
+    render();
   } else if (name === 'poem-submit-sentence') {
     event.preventDefault();
-    action('/api/poem/submit', { variant: 'sentence', order: P.order, text: P.sentence });
+    if (P.order.some((value) => !value)) {
+      showToast('先把所有字放进方框。');
+      return;
+    }
+    action('/api/poem/submit', { variant: 'sentence', order: [...P.order], text: P.sentence });
   } else if (name === 'poem-vote') {
     event.preventDefault();
     action('/api/poem/vote', { targetId: target.dataset.id });
@@ -616,6 +663,9 @@ document.addEventListener('click', (event) => {
   } else if (name === 'poem-copy-watch' && P.room) {
     event.preventDefault();
     copy(watchUrl(P.room.code), '观战链接已复制');
+  } else if (name === 'poem-copy-share' && P.room) {
+    event.preventDefault();
+    copy(shareText(P.room.code), '邀请和观战链接已一起复制');
   } else if (name === 'poem-leave') {
     event.preventDefault();
     leave();
