@@ -1032,6 +1032,14 @@ function createApp(options = {}) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/poem/char/draft') {
+      await handleAction(req, res, async (body) => {
+        poem.saveCharDraft(body.code, body.playerId, body.token, body.char);
+        return { ok: true };
+      });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/poem/char') {
       await handleAction(req, res, async (body) => {
         const { room } = poem.submitChar(body.code, body.playerId, body.token, body.char);

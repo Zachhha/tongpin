@@ -25,6 +25,7 @@ const P = {
 };
 
 let pollTimer = null;
+let draftTimer = null;
 let toastCounter = 0;
 
 function esc(value) {
@@ -35,6 +36,15 @@ function esc(value) {
 
 function firstChar(value) {
   return Array.from(String(value || '?'))[0] || '?';
+}
+
+async function saveCharDraft(char) {
+  if (!P.creds) return;
+  try {
+    await api('/api/poem/char/draft', { ...P.creds, char });
+  } catch {
+    // Draft saving is best-effort; submitting the char is authoritative.
+  }
 }
 
 function showToast(message) {
@@ -129,7 +139,7 @@ function applyState(state) {
   P.lastSig = next;
   P.room = state;
   P.clockOffset = Number(state.serverNow) - Date.now();
-  if (previous && (previous.round !== state.round || (previous.phase !== 'writing' && state.phase === 'writing'))) {
+  if (previous && (previous.round !== state.round || previous.phase !== state.phase)) {
     P.lines = [];
     P.order = [];
     P.used = [];
@@ -142,7 +152,7 @@ function applyState(state) {
   }
   if (state.phase === 'writing' && state.variant === 'sentence') {
     const chars = (state.chars || []).map((item) => item.char || '？');
-    const key = `${state.round}:${chars.join('')}`;
+    const key = `${state.round}:${state.charToken}:${chars.join('')}`;
     if (P.orderKey !== key) {
       P.order = chars.map(() => null);
       P.used = [];
@@ -326,7 +336,7 @@ function charsMarkup(room) {
       ${viewer.isSpectator ? `<section class="poem-wait"><h2>看他们出什么字</h2><p>所有人出完字后，会公开这组字，再进入造句。</p></section>` : viewer.submitted ? `<section class="poem-wait"><h2>字已交出</h2><p>等其他人出完，一起看这组字。</p></section>` : `<section class="poem-form">
         <div class="poem-panel-head"><h2>你的一个字</h2><span>最多 1 字</span></div>
         <label class="field"><span class="field-label"><span>写一个字</span><span>待会儿要排进句子里</span></span><input class="text-input poem-char-input" id="poem-char" maxlength="1" value="${esc(P.char)}" placeholder="字" /></label>
-        <p class="poem-form-tip">交出去后不能改。所有人出完，才会公开。</p>
+        <p class="poem-form-tip">输入后会自动存档。20 秒内没提交，会使用最后一次存档；如果完全没填，系统会代填一个字并提示。</p>
         <button class="btn btn-primary" data-action="poem-submit-char" ${P.busy ? 'disabled' : ''}>${P.busy ? '正在落笔…' : '交出这个字'}</button>
       </section>`}
       ${restart(room)}
@@ -363,7 +373,7 @@ function sentenceMarkup(room) {
   const viewer = room.viewer;
   const chars = (room.chars || []).map((item) => item.char || '？');
   const labels = ['首', ...chars.slice(1, -1).map((_, index) => `句中 ${index + 1}`), '尾'];
-  const key = `${room.round}:${chars.join('')}`;
+  const key = `${room.round}:${room.charToken}:${chars.join('')}`;
   if (P.orderKey !== key) {
     P.order = chars.map(() => null);
     P.used = [];
@@ -383,6 +393,7 @@ function sentenceMarkup(room) {
         <div><p class="eyebrow">SENTENCE / 首尾造句</p><h1 class="poem-title">这组字，<br /><em>你说了算。</em></h1><p class="poem-sub">先把下面的字按顺序点进上方空方框，再在两个方框之间的输入框里补中间内容。点已填入方框的字，所有字会退回重排。不限时。</p></div>
       </div>
       <div class="poem-paper"><p class="eyebrow">CHARS / 本组字</p><h2>${chars.map(esc).join(' · ')}</h2><div class="poem-big-prompt">${chars.map((char) => `<span>${esc(char)}</span>`).join('')}</div></div>
+      ${room.autoFilled?.length ? `<p class="poem-form-tip" style="text-align:center">出字超时：${room.autoFilled.map((item) => `${esc(item.name)}「${esc(item.char)}」${item.source === 'draft' ? '（使用存档）' : '（系统代填）'}`).join('、')}</p>` : ''}
       ${progress(room, 'writing')}
       ${viewer.isSpectator ? `<section class="poem-wait"><h2>看他们怎么排</h2><p>所有人提交后匿名展示，再投票。</p></section>` : viewer.submitted ? `<section class="poem-wait"><h2>句子已交</h2><p>等其他人排完，随后匿名展示。</p></section>` : `<section class="poem-form">
         <div class="poem-panel-head"><h2>排位 + 造句</h2><span>${chars.length} 个字 / ${chars.length - 1} 段中间内容</span></div>
@@ -615,7 +626,11 @@ document.addEventListener('submit', (event) => {
 document.addEventListener('input', (event) => {
   if (event.target.id === 'poem-name') P.name = event.target.value;
   if (event.target.id === 'poem-code') P.code = event.target.value.toUpperCase();
-  if (event.target.id === 'poem-char') P.char = event.target.value.slice(0, 1);
+  if (event.target.id === 'poem-char') {
+    P.char = event.target.value.slice(0, 1);
+    if (draftTimer) window.clearTimeout(draftTimer);
+    draftTimer = window.setTimeout(() => saveCharDraft(P.char), 500);
+  }
   if (event.target.dataset.poemGap !== undefined) {
     P.gaps[Number(event.target.dataset.poemGap)] = event.target.value.slice(0, 40);
     syncSentenceControls();
