@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
   <img src="preview/readme-home.png" alt="同频首页：四个游戏模式" width="860" />
 </p>
 
@@ -47,6 +47,7 @@
 | **大文豪** | 2–6 | 藏头诗 / 首尾造句，水墨风 | `/poem` |
 
 > 首页顶部可以直接切换四个模式。  
+> 右上角「更新日志」按版本记录了所有主要更新。  
 > 双人局在「危机公关」和「大文豪」里都不计分。
 
 ---
@@ -371,7 +372,8 @@ tongpin/
 │  ├─ app.js
 │  ├─ guess.html / guess.css / guess.js
 │  ├─ crisis.html / crisis.css / crisis.js
-│  └─ poem.html / poem.css / poem.js
+│  ├─ poem.html / poem.css / poem.js
+│  └─ updates.html / updates.css   # 按版本展示的更新日志
 ├─ test/
 │  ├─ game.test.js
 │  ├─ guess.test.js
@@ -389,3 +391,4 @@ tongpin/
   <strong>想到一起，才算数。</strong><br />
   <sub>TONGPIN © 2026</sub>
 </p>
+
