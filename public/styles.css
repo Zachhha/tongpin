@@ -4292,3 +4292,16 @@ a {
     padding: 8px 1px;
   }
 }
+
+.mode-switch .mode-crisis em {
+  margin-left: 1px;
+  color: var(--red);
+  font-size: 1.3em;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.mode-switch a.active .mode-crisis em {
+  color: var(--paper-2);
+}

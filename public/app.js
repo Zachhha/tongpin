@@ -172,7 +172,8 @@ function homeHeader() {
       <nav class="mode-switch" aria-label="切换游戏模式">
         <a href="/" class="active" aria-current="page"><b>同频</b><span>猜词</span></a>
         <a href="/guess"><b>满分</b><span>猜分</span></a>
-        <a href="/crisis"><b>危机</b><span>公关</span></a>
+        <a href="/crisis"><b class="mode-crisis">危机<em>公关</em></b></a>
+        <a href="/poem"><b>大文豪</b><span>水墨</span></a>
       </nav>
       <button type="button" class="text-link" data-action="open-how">怎么玩</button>
     </div>

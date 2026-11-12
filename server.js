@@ -7,6 +7,7 @@ const os = require('node:os');
 const { GameStore, GameError } = require('./lib/game');
 const { GuessStore } = require('./lib/guess');
 const { CrisisStore } = require('./lib/crisis');
+const { PoemStore } = require('./lib/poem');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DEFAULT_PORT = Number(process.env.PORT) || 8787;
@@ -33,6 +34,11 @@ const STATIC_FILES = new Map([
   ['/crisis.html', ['crisis.html', 'text/html; charset=utf-8']],
   ['/crisis.css', ['crisis.css', 'text/css; charset=utf-8']],
   ['/crisis.js', ['crisis.js', 'text/javascript; charset=utf-8']],
+  ['/poem', ['poem.html', 'text/html; charset=utf-8']],
+  ['/poem/', ['poem.html', 'text/html; charset=utf-8']],
+  ['/poem.html', ['poem.html', 'text/html; charset=utf-8']],
+  ['/poem.css', ['poem.css', 'text/css; charset=utf-8']],
+  ['/poem.js', ['poem.js', 'text/javascript; charset=utf-8']],
 ]);
 
 function sendJson(res, status, payload) {
@@ -127,6 +133,7 @@ function createApp(options = {}) {
   const game = new GameStore({ allowedDurations: options.allowedDurations });
   const guess = new GuessStore();
   const crisis = new CrisisStore();
+  const poem = new PoemStore();
   const publicUrl = normalizePublicUrl(
     options.publicUrl ||
       process.env.PUBLIC_URL ||
@@ -940,6 +947,136 @@ function createApp(options = {}) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/poem/state') {
+      try {
+        const room = poem.room(url.searchParams.get('code'));
+        const role = url.searchParams.get('role') === 'spectator' ? 'spectator' : 'player';
+        sendJson(res, 200, {
+          ok: true,
+          state: poem.view(room, url.searchParams.get('playerId'), role),
+        });
+      } catch (error) {
+        sendJson(res, error.status || 500, { error: error.message || '读取失败。' });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/poem/rooms') {
+      await handleAction(req, res, async (body) => {
+        const { room, player } = poem.createRoom(body.name);
+        return { code: room.code, playerId: player.id, token: player.token, role: 'player', state: poem.view(room, player.id) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/poem/join') {
+      await handleAction(req, res, async (body) => {
+        const { room, player } = poem.joinRoom(body.code, body.name);
+        return { code: room.code, playerId: player.id, token: player.token, role: 'player', state: poem.view(room, player.id) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/poem/spectate') {
+      await handleAction(req, res, async (body) => {
+        const { room, spectator } = poem.addSpectator(body.code, body.name);
+        return { code: room.code, playerId: spectator.id, token: spectator.token, role: 'spectator', name: spectator.name, state: poem.view(room, spectator.id, 'spectator') };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/poem/rejoin') {
+      await handleAction(req, res, async (body) => {
+        const role = body.role === 'spectator' ? 'spectator' : 'player';
+        const outcome = poem.rejoin(body.code, body.playerId, body.token, role);
+        const member = role === 'spectator' ? outcome.spectator : outcome.player;
+        return { code: outcome.room.code, playerId: member.id, token: member.token, role, name: member.name, state: poem.view(outcome.room, member.id, role) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/poem/leave') {
+      await handleAction(req, res, async (body) => {
+        const outcome = poem.leave(body.code, body.playerId, body.token);
+        return { ok: true, deleted: outcome.deleted };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/poem/spectate/leave') {
+      await handleAction(req, res, async (body) => {
+        poem.leaveSpectator(body.code, body.playerId, body.token);
+        return { ok: true };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/poem/variant') {
+      await handleAction(req, res, async (body) => {
+        const { room } = poem.setVariant(body.code, body.playerId, body.token, body.variant);
+        return { ok: true, state: poem.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/poem/start') {
+      await handleAction(req, res, async (body) => {
+        const { room } = poem.start(body.code, body.playerId, body.token);
+        return { ok: true, state: poem.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/poem/char') {
+      await handleAction(req, res, async (body) => {
+        const { room } = poem.submitChar(body.code, body.playerId, body.token, body.char);
+        return { ok: true, state: poem.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/poem/submit') {
+      await handleAction(req, res, async (body) => {
+        const { room } = body.variant === 'sentence'
+          ? poem.submitSentence(body.code, body.playerId, body.token, body.order, body.text)
+          : poem.submitPoem(body.code, body.playerId, body.token, body.lines);
+        return { ok: true, state: poem.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/poem/vote') {
+      await handleAction(req, res, async (body) => {
+        const { room } = poem.submitVote(body.code, body.playerId, body.token, body.targetId);
+        return { ok: true, state: poem.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/poem/prompt') {
+      await handleAction(req, res, async (body) => {
+        const { room } = poem.choosePrompt(body.code, body.playerId, body.token, body.prompt);
+        return { ok: true, state: poem.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/poem/next') {
+      await handleAction(req, res, async (body) => {
+        const { room } = poem.nextRound(body.code, body.playerId, body.token);
+        return { ok: true, state: poem.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/poem/restart') {
+      await handleAction(req, res, async (body) => {
+        const { room } = poem.restart(body.code, body.playerId, body.token);
+        return { ok: true, state: poem.view(room, body.playerId) };
+      });
+      return;
+    }
+
     if (req.method === 'GET' || req.method === 'HEAD') {
       await serveStatic(req, res, url.pathname);
       return;
@@ -974,6 +1111,12 @@ function createApp(options = {}) {
       if (room.phase === 'question' && room.phaseEndsAt && Date.now() >= room.phaseEndsAt) {
         guess.finishQuestions(room);
       }
+    }
+    for (const room of poem.rooms.values()) {
+      if (!room.phaseEndsAt || Date.now() < room.phaseEndsAt) continue;
+      if (room.phase === 'chars') poem.finishChars(room);
+      else if (room.phase === 'writing') poem.finishWriting(room);
+      else if (room.phase === 'voting') poem.finishVoting(room);
     }
   }, 200);
 

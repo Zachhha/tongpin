@@ -224,7 +224,7 @@ function landingMarkup() {
         <h1>先别解释，<br /><span>先提案。</span></h1>
         <p class="crisis-lede">一场危机，所有人都是公关团队。写一句话、一份声明、一个补救动作，匿名投票。3 轮后，谁的提案最想被执行？</p>
         <div class="crisis-hero-stats"><span>2–6 人</span><i>·</i><span>3 轮</span><i>·</i><span>全文字</span><i>·</i><span>可观战</span></div>
-        <div class="crisis-score-teaser"><span>2 人局：</span><b>互评三项</b><span>3 人以上：匿名投票</span></div>
+        <div class="crisis-score-teaser"><span>2 人局：</span><b>不计分，直接看提案</b><span>3 人以上：匿名投票</span></div>
       </section>
       <section>
         <div class="crisis-entry-card">
@@ -247,7 +247,7 @@ function landingMarkup() {
       <section class="crisis-rules">
         <article><span>01 / CRISIS</span><h3>发危机</h3><p>每轮一张公共危机卡，所有人看到的信息一样。</p></article>
         <article><span>02 / PROPOSE</span><h3>写提案</h3><p>用一段话写你的公关方案，不限时。</p></article>
-        <article><span>03 / VOTE</span><h3>匿名投票</h3><p>3 人以上投别人；2 人局互评三项。</p></article>
+        <article><span>03 / VOTE</span><h3>匿名投票</h3><p>3 人以上投别人；2 人局不计分。</p></article>
         <article><span>04 / SCORE</span><h3>三轮结算</h3><p>每轮累计分数，3 轮后最高者胜出。</p></article>
       </section>
     </main>
@@ -318,7 +318,7 @@ function lobbyMarkup(room) {
         </section>
         <aside class="crisis-side">
           ${inviteMarkup(room)}
-          <section class="crisis-mini-rules"><p class="eyebrow">HOW / 一轮怎么走</p><ul><li><b>不限时</b> 写一段提案</li><li><b>全部提交</b> 后匿名亮出</li><li><b>3 人以上</b> 投别人一票</li><li><b>2 人</b> 互评三项 1–5 分</li></ul></section>
+          <section class="crisis-mini-rules"><p class="eyebrow">HOW / 一轮怎么走</p><ul><li><b>不限时</b> 写一段提案</li><li><b>全部提交</b> 后匿名亮出</li><li><b>3 人以上</b> 投别人一票</li><li><b>2 人</b> 不计分，直接互看</li></ul></section>
         </aside>
       </div>
     </main>
@@ -349,20 +349,21 @@ function writingMarkup(room) {
   const viewer = room.viewer;
   const isSpectator = viewer.isSpectator;
   const submitted = viewer.submitted;
+  const isCoop = room.players.length === 2;
   return `<div class="crisis-shell">
     ${headerMarkup(room)}
     <main class="crisis-page" id="main">
       <div class="crisis-round-line"><span>ROUND ${room.round} / ${room.totalRounds}</span><i></i><span>${isSpectator ? '观战' : submitted ? '已提交' : '写提案中'}</span></div>
       <div class="crisis-page-head">
-        <div><p class="eyebrow">PROPOSE / 写提案</p><h1 class="crisis-title">先处理，<br /><span>再解释。</span></h1><p class="crisis-sub">${isSpectator ? '你在观战。玩家提交后，所有提案会匿名展示。' : '用一段话写你的公关方案。不限时，全部提交后自动进入匿名投票。'}</p></div>
+        <div><p class="eyebrow">PROPOSE / 写提案</p><h1 class="crisis-title">先处理，<br /><span>再解释。</span></h1><p class="crisis-sub">${isSpectator ? (isCoop ? '你在观战。双方提交后直接揭晓。' : '你在观战。玩家提交后，所有提案会匿名展示。') : isCoop ? '用一段话写你的公关方案。双人局不计分，全部提交后直接看对方怎么写。' : '用一段话写你的公关方案。不限时，全部提交后自动进入匿名投票。'}</p></div>
       </div>
       ${crisisCard(room.crisis)}
       ${room.canReroll ? `<div class="crisis-reroll-row"><button class="btn btn-soft" data-action="crisis-reroll">换一个危机</button><span>还没人提交，可以继续换</span></div>` : ''}
       ${progressMarkup(room, 'writing')}
-      ${isSpectator ? `<section class="crisis-wait-card"><h2>看他们怎么处理</h2><p>所有提案提交后，会匿名展示，然后进入投票。</p></section>` : submitted ? `<section class="crisis-wait-card"><h2>提案已提交</h2><p>等其他人写完，所有方案会匿名亮出。</p></section>` : `<section class="crisis-proposal-form">
+      ${isSpectator ? `<section class="crisis-wait-card"><h2>看他们怎么处理</h2><p>${isCoop ? '双方提交后直接揭晓。' : '所有提案提交后，会匿名展示，然后进入投票。'}</p></section>` : submitted ? `<section class="crisis-wait-card"><h2>提案已提交</h2><p>${isCoop ? '等对方写完，直接揭晓双方提案。' : '等其他人写完，所有方案会匿名亮出。'}</p></section>` : `<section class="crisis-proposal-form">
         <div class="crisis-panel-head"><h2>你的提案</h2><span>${room.players.length} 家公关团队</span></div>
         <label class="field"><span class="field-label"><span>写一段公关方案</span><span>最多 400 字</span></span><textarea class="guess-textarea crisis-proposal-textarea" id="crisis-proposal" maxlength="400" rows="7" placeholder="比如：先停业并公开后厨监控，所有受影响顾客全额退款，三天内给出完整整改清单。">${esc(C.proposalText)}</textarea></label>
-        <p class="crisis-form-tip">提交后不能修改。全部提交后进入匿名投票。</p>
+        <p class="crisis-form-tip">提交后不能修改。${isCoop ? '双人局提交后直接揭晓，不计分。' : '全部提交后进入匿名投票。'}</p>
         <button class="btn btn-primary crisis-wide" data-action="crisis-submit-proposal" ${C.busy ? 'disabled' : ''}>${C.busy ? '正在提交…' : '提交提案'}</button>
       </section>`}
       ${restartMarkup(room)}
@@ -414,16 +415,17 @@ function revealMarkup(room) {
   const result = room.result;
   const viewer = room.viewer;
   const isSpectator = viewer.isSpectator;
+  const isCoop = Boolean(result.isCoop);
   return `<div class="crisis-shell">
     ${headerMarkup(room)}
     <main class="crisis-page" id="main">
       <div class="crisis-round-line"><span>ROUND ${room.round} / ${room.totalRounds}</span><i></i><span>${result.isFinal ? '最终结算' : '揭晓'}</span></div>
       <div class="crisis-page-head">
-        <div><p class="eyebrow">${result.isFinal ? 'FINAL / 三轮结束' : 'REVEAL / 本轮结果'}</p><h1 class="crisis-title">${result.isFinal ? '三轮结束，<br /><span>看看谁的提案最硬。</span>' : '这一轮，<br /><span>谁说服了大家？</span>'}</h1><p class="crisis-sub">${result.ratingMode ? '2 人局：三项评分相加，就是本轮得分。' : '每人一票，票数就是本轮得分。'}</p></div>
+        <div><p class="eyebrow">${result.isFinal ? 'FINAL / 三轮结束' : 'REVEAL / 本轮结果'}</p><h1 class="crisis-title">${isCoop ? (result.isFinal ? '三轮结束，<br /><span>你们都写完了。</span>' : '这一轮，<br /><span>看看对方怎么写。</span>') : result.isFinal ? '三轮结束，<br /><span>看看谁的提案最硬。</span>' : '这一轮，<br /><span>谁说服了大家？</span>'}</h1><p class="crisis-sub">${isCoop ? '双人模式不计分，直接揭晓双方的提案。' : '每人一票，票数就是本轮得分。'}</p></div>
       </div>
       ${crisisCard(result.crisis)}
       <div class="crisis-proposals">${result.entries.map((entry) => resultCardMarkup(entry, result)).join('')}</div>
-      <section class="crisis-scoreboard"><h2>${result.isFinal ? '最终排名' : '当前累计'}</h2>${room.scores.map((score, index) => `<div class="crisis-score-row"><span>${index + 1}. ${esc(score.name)}</span><b>${score.score} 分</b></div>`).join('')}</section>
+      ${isCoop ? '' : `<section class="crisis-scoreboard"><h2>${result.isFinal ? '最终排名' : '当前累计'}</h2>${room.scores.map((score, index) => `<div class="crisis-score-row"><span>${index + 1}. ${esc(score.name)}</span><b>${score.score} 分</b></div>`).join('')}</section>`}
       ${!isSpectator && room.canNext ? `<div class="crisis-next-row"><p>房主可以进入下一轮。</p><button class="btn btn-primary" data-action="crisis-next">下一轮</button></div>` : ''}
       ${!isSpectator && room.canRestart ? `<div class="crisis-next-row"><p>三局结束，可以重开一局。</p><button class="btn btn-primary" data-action="crisis-restart">重开一局</button></div>` : ''}
       ${isSpectator ? '<p class="crisis-form-tip" style="text-align:center;margin-top:16px">你在观战。房主决定是否继续。</p>' : ''}
@@ -435,11 +437,11 @@ function revealMarkup(room) {
 }
 
 function resultCardMarkup(entry, result) {
-  const isWinner = entry.points > 0 && entry.points === Math.max(...result.entries.map((item) => item.points));
+  const isWinner = !result.isCoop && entry.points > 0 && entry.points === Math.max(...result.entries.map((item) => item.points));
   return `<article class="crisis-proposal-card crisis-result-card${isWinner ? ' is-winner' : ''}">
-    <div class="crisis-proposal-index"><span>${esc(entry.name)}</span><span>${result.ratingMode ? '互评' : `${entry.votes} 票`}</span></div>
+    <div class="crisis-proposal-index"><span>${esc(entry.name)}</span><span>${result.isCoop ? '双人局' : `${entry.votes} 票`}</span></div>
     <p class="crisis-proposal-text">${esc(entry.proposal.text)}</p>
-    <div class="crisis-result-score"><strong>${entry.points} 分</strong><span>${result.ratingMode ? `可信 ${entry.rating?.credibility || 0} · 执行 ${entry.rating?.execution || 0} · 创意 ${entry.rating?.creativity || 0}` : `${entry.votes} 票`}</span></div>
+    ${result.isCoop ? '' : `<div class="crisis-result-score"><strong>${entry.points} 分</strong><span>${entry.votes} 票</span></div>`}
   </article>`;
 }
 
@@ -577,7 +579,9 @@ function buildExport(room) {
       lines.push(`${index + 1}. ${entry.name}`);
       lines.push('   提案：');
       lines.push(indentBlock(entry.proposal.text));
-      if (result.ratingMode) {
+      if (result.isCoop) {
+        lines.push('   双人局：不计分');
+      } else if (result.ratingMode) {
         const rating = entry.rating;
         lines.push(
           rating
@@ -590,21 +594,29 @@ function buildExport(room) {
     });
 
     lines.push(rule);
-    lines.push('本轮排名：');
-    [...result.entries]
-      .sort((a, b) => b.points - a.points)
-      .forEach((entry, index) => {
-        lines.push(`  ${index + 1}. ${entry.name} — ${entry.points} 分`);
-      });
+    if (result.isCoop) {
+      lines.push('本轮：双人局不计分');
+    } else {
+      lines.push('本轮排名：');
+      [...result.entries]
+        .sort((a, b) => b.points - a.points)
+        .forEach((entry, index) => {
+          lines.push(`  ${index + 1}. ${entry.name} — ${entry.points} 分`);
+        });
+    }
   }
 
   lines.push('');
   lines.push('════════════════════════════');
   lines.push(room.history.some((result) => result.isFinal) ? '最终排名' : '当前累计');
   lines.push('════════════════════════════');
-  room.scores.forEach((score, index) => {
-    lines.push(`${index + 1}. ${score.name} — ${score.score} 分`);
-  });
+  if (!room.scores.length) {
+    lines.push('双人局不计分');
+  } else {
+    room.scores.forEach((score, index) => {
+      lines.push(`${index + 1}. ${score.name} — ${score.score} 分`);
+    });
+  }
   return lines.join('\n');
 }
 
