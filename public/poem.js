@@ -371,10 +371,11 @@ function sentenceMarkup(room) {
     P.gaps = chars.slice(0, -1).map(() => '');
   }
   if (P.gaps.length !== chars.length - 1) P.gaps = chars.slice(0, -1).map(() => '');
-  const complete = P.order.every(Boolean) && P.gaps.every((gap) => gap.trim());
+  const complete = P.order.every(Boolean);
   const preview = P.order
     .map((char, index) => (char ? `${char}${P.gaps[index] || ''}` : ''))
     .join('');
+  const gapCount = chars.length - 1;
   return `<div class="poem-shell">
     ${header(room)}
     <main class="poem-page" id="main">
@@ -391,20 +392,36 @@ function sentenceMarkup(room) {
               ${chars.map((char, index) => `<button class="poem-char-slot${P.order[index] ? ' filled' : ''}" data-action="${P.order[index] ? 'poem-reset-order' : ''}" aria-label="${esc(labels[index])}${P.order[index] ? `：${esc(P.order[index])}` : '空方框'}"><span class="poem-char-slot-label">${esc(labels[index])}</span><b>${P.order[index] ? esc(P.order[index]) : ''}</b><i></i></button>${index < chars.length - 1 ? `<input class="poem-gap-input" data-poem-gap="${index}" maxlength="40" value="${esc(P.gaps[index] || '')}" placeholder="中间内容" />` : ''}`).join('')}
             </div>
             <div class="poem-source-row">${chars.map((char, index) => `<button class="poem-source-chip${P.used.includes(index) ? ' used' : ''}" data-action="poem-place-char" data-index="${index}" ${P.used.includes(index) ? 'disabled' : ''}>${esc(char)}</button>`).join('')}</div>
-            <p class="poem-sentence-preview">${preview ? esc(preview) : '按顺序点字，再补中间内容'}</p>
+            <p class="poem-sentence-preview" data-poem-preview>${preview ? esc(preview) : '按顺序点字，再补中间内容'}</p>
           </div>
           <aside class="poem-sentence-guide">
             <p><b>①</b><span>先按顺序点下面的字，让它们依次进入上方空方框。</span></p>
-            <p><b>②</b><span>再在方框之间的两个输入框里补中间内容，组成一句话。</span></p>
+            <p><b>②</b><span>再在方框之间的 ${gapCount} 个输入框里补中间内容；中间可以留空。</span></p>
           </aside>
         </div>
-        <p class="poem-form-tip">先排字，再补内容；点已填入方框的字可以全部退回。</p>
+        <p class="poem-form-tip">先排字，再补内容；中间内容可以留空。点已填入方框的字可以全部退回。</p>
         <button class="btn btn-primary" data-action="poem-submit-sentence" ${P.busy || !complete ? 'disabled' : ''}>${P.busy ? '正在落笔…' : '交出这句话'}</button>
       </section>`}
       ${restart(room)}
     </main>
     ${foot()}
   </div>`;
+}
+
+function sentenceReady() {
+  return P.order.length > 0 && P.order.every(Boolean);
+}
+
+function syncSentenceControls() {
+  const button = document.querySelector('[data-action="poem-submit-sentence"]');
+  if (button) button.disabled = P.busy || !sentenceReady();
+  const preview = document.querySelector('[data-poem-preview]');
+  if (preview) {
+    const text = P.order
+      .map((char, index) => (char ? `${char}${P.gaps[index] || ''}` : ''))
+      .join('');
+    preview.textContent = text || '按顺序点字，再补中间内容';
+  }
 }
 
 function poemCard(item, room, reveal = false) {
@@ -601,6 +618,7 @@ document.addEventListener('input', (event) => {
   if (event.target.id === 'poem-char') P.char = event.target.value.slice(0, 1);
   if (event.target.dataset.poemGap !== undefined) {
     P.gaps[Number(event.target.dataset.poemGap)] = event.target.value.slice(0, 40);
+    syncSentenceControls();
   }
   if (event.target.id === 'poem-next-prompt') P.promptInput = event.target.value.slice(0, 4);
   if (event.target.dataset.poemLine !== undefined) {
@@ -656,8 +674,8 @@ document.addEventListener('click', (event) => {
       showToast('先把所有字放进方框。');
       return;
     }
-    if (P.gaps.some((gap) => !gap.trim())) {
-      showToast('把中间内容也补上。');
+    const hasEmptyGap = P.gaps.some((gap) => !gap.trim());
+    if (hasEmptyGap && !window.confirm('还有输入框没填，确定要这样提交吗？提交后不能修改。')) {
       return;
     }
     const sentence = P.order.map((char, index) => `${char}${P.gaps[index] || ''}`).join('');
