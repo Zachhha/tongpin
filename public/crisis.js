@@ -400,7 +400,7 @@ function proposalMarkup(proposal, room) {
   const ratingMode = room.ratingMode;
   const canVote = !isSpectator && !proposal.isYou && !room.viewer.voted;
   return `<article class="crisis-proposal-card${proposal.isYou ? ' is-you' : ''}">
-    <div class="crisis-proposal-index"><span>PROPOSAL ${esc(proposal.id.slice(0, 4).toUpperCase())}</span><span>${proposal.isYou ? '你的方案' : '匿名方案'}</span></div>
+    <div class="crisis-proposal-index"><span>${esc(proposal.label || '匿名作品')}</span><span>${proposal.isYou ? '你的方案' : '匿名方案'}</span></div>
     <p class="crisis-proposal-text">${esc(proposal.text)}</p>
     ${!ratingMode && canVote ? `<button class="btn btn-primary vote-btn" data-action="crisis-vote" data-id="${esc(proposal.id)}">投这份</button>` : ''}
     ${ratingMode && canVote ? `<div class="crisis-rating">

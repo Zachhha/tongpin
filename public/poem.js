@@ -443,7 +443,7 @@ function poemCard(item, room, reveal = false) {
   const topVotes = Math.max(0, ...((room.result?.entries || []).map((entry) => entry.votes || 0)));
   const isWinner = reveal && !room.isCoop && topVotes > 0 && item.votes === topVotes;
   return `<article class="poem-card${item.isYou ? ' is-you' : ''}${isWinner ? ' is-winner' : ''}">
-    <div class="poem-card-head"><span>${reveal ? esc(item.author || item.name || '佚名') : `作品 ${esc(String(item.id).slice(0, 4).toUpperCase())}`}</span><span>${reveal ? (room.isCoop ? '双人局' : `${item.votes || 0} 票`) : item.isYou ? '你的' : '匿名'}</span></div>
+    <div class="poem-card-head"><span>${reveal ? esc(item.author || item.name || '佚名') : esc(item.label || '匿名作品')}</span><span>${reveal ? (room.isCoop ? '双人局' : `${item.votes || 0} 票`) : item.isYou ? '你的' : '匿名'}</span></div>
     ${room.variant === 'acrostic' ? `<h3>${esc(room.prompt)}</h3><div class="poem-card-lines">${lines.map((line, index) => `<p><b>${esc(Array.from(room.prompt)[index] || '')}</b>${esc(line)}</p>`).join('')}</div>` : `<div class="poem-card-order">${order.map((char, index) => `<span>${esc(labels[index] || '句')}：<b>${esc(char)}</b></span>`).join('')}</div><p class="poem-card-sentence">${esc(item.text)}</p>`}
     ${!reveal && !room.viewer.isSpectator && !item.isYou && !room.viewer.voted ? `<button class="btn btn-primary poem-vote-btn" data-action="poem-vote" data-id="${esc(item.id)}">投这首</button>` : ''}
   </article>`;
