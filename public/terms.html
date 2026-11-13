@@ -40,7 +40,14 @@
           <div class="quiz-top">
             <button type="button" id="back-setup" class="quiz-back">← 换题库</button>
             <div class="quiz-progress"><span id="quiz-scope"></span><b id="quiz-count"></b></div>
-            <button type="button" id="export-session" class="quiz-export" disabled>导出本次所答</button>
+            <div class="export-tools">
+              <select id="export-format" class="export-format" aria-label="导出格式">
+                <option value="doc">Word</option>
+                <option value="txt">TXT</option>
+                <option value="csv">CSV</option>
+              </select>
+              <button type="button" id="export-session" class="quiz-export" disabled>导出本次所答</button>
+            </div>
           </div>
 
           <article class="quiz-card">
@@ -60,7 +67,6 @@
               <div class="answer-label">ANSWER / 答案</div>
               <p id="answer-text" class="answer-text"></p>
               <div class="answer-actions">
-                <button type="button" id="reveal-answer" class="terms-btn terms-btn-ghost">显示答案</button>
                 <button type="button" id="next-question" class="terms-btn terms-btn-primary">下一题</button>
               </div>
             </div>
@@ -78,6 +84,11 @@
           <h2>这一轮复习完了。</h2>
           <p id="finish-text"></p>
           <div class="finish-actions">
+            <select id="finish-export-format" class="export-format" aria-label="导出格式">
+              <option value="doc">Word</option>
+              <option value="txt">TXT</option>
+              <option value="csv">CSV</option>
+            </select>
             <button type="button" id="finish-export" class="terms-btn">导出本次所答</button>
             <button type="button" id="finish-again" class="terms-btn terms-btn-primary">再选一个题库</button>
           </div>

@@ -26,7 +26,9 @@ const finishText = document.querySelector('#finish-text');
 const finishAgain = document.querySelector('#finish-again');
 const backSetup = document.querySelector('#back-setup');
 const exportSessionButton = document.querySelector('#export-session');
+const exportFormatSelect = document.querySelector('#export-format');
 const finishExport = document.querySelector('#finish-export');
+const finishExportFormat = document.querySelector('#finish-export-format');
 const toastNode = document.querySelector('#terms-toast');
 
 let allItems = [];
@@ -231,6 +233,34 @@ function showFinish() {
   if (finishExport) finishExport.disabled = !answeredItems.length;
 }
 
+function currentFormat() {
+  return exportFormatSelect?.value || finishExportFormat?.value || 'doc';
+}
+
+function syncFormat(value) {
+  if (exportFormatSelect) exportFormatSelect.value = value;
+  if (finishExportFormat) finishExportFormat.value = value;
+}
+
+function exportWord(date) {
+  const rows = answeredItems.map((item, i) => `<h2>${i + 1}. ${esc(item.term)}</h2><p class="meta">${esc(item.board)} / ${esc(item.chapter)}</p><p>${esc(item.answer)}</p>`).join('');
+  return `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;line-height:1.8;color:#222}h1{font-size:24px}h2{font-size:17px;margin-top:24px}.meta{color:#777;font-size:12px}</style></head><body><h1>同频术语复习</h1><p>范围：${esc(scopeName)}<br>导出日期：${date}<br>已答术语：${answeredItems.length} 个</p>${rows}</body></html>`;
+}
+
+function exportText(date) {
+  const lines = ['同频术语复习', `范围：${scopeName}`, `导出日期：${date}`, `已答术语：${answeredItems.length} 个`, ''];
+  answeredItems.forEach((item, i) => {
+    lines.push(`${i + 1}. ${item.term}`, `${item.board} / ${item.chapter}`, item.answer, '');
+  });
+  return lines.join('\n');
+}
+
+function exportCsv() {
+  const rows = [['术语', '科目', '章节', '定义与例子']];
+  for (const item of answeredItems) rows.push([item.term, item.board, item.chapter, item.answer]);
+  return '\ufeff' + rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+}
+
 function exportAnswered() {
   if (!answeredItems.length) {
     toast('这轮还没有答过术语。');
@@ -238,29 +268,37 @@ function exportAnswered() {
   }
   const now = new Date();
   const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const lines = [
-    '# 同频术语复习',
-    '',
-    `范围：${scopeName}`,
-    `导出日期：${date}`,
-    `已答术语：${answeredItems.length} 个`,
-    '',
-  ];
-  answeredItems.forEach((item, i) => {
-    lines.push(`## ${i + 1}. ${item.term}`, '', `章节：${item.board} / ${item.chapter}`, '', item.answer, '');
-  });
-  const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+  const format = currentFormat();
+  let content = '';
+  let mime = '';
+  let ext = '';
+  if (format === 'csv') {
+    content = exportCsv();
+    mime = 'text/csv;charset=utf-8';
+    ext = 'csv';
+  } else if (format === 'txt') {
+    content = exportText(date);
+    mime = 'text/plain;charset=utf-8';
+    ext = 'txt';
+  } else {
+    content = exportWord(date);
+    mime = 'application/msword';
+    ext = 'doc';
+  }
+  const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `同频术语复习_${date}.md`;
+  link.download = `同频术语复习_${date}.${ext}`;
   document.body.appendChild(link);
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
-  toast('已导出本次所答术语。');
+  toast(`已导出 ${ext.toUpperCase()} 文件。`);
 }
 
+exportFormatSelect.addEventListener('change', () => syncFormat(exportFormatSelect.value));
+finishExportFormat.addEventListener('change', () => syncFormat(finishExportFormat.value));
 exportSessionButton.addEventListener('click', exportAnswered);
 finishExport.addEventListener('click', exportAnswered);
 

@@ -476,3 +476,43 @@ body { margin: 0; }
   flex-wrap: wrap;
   gap: 8px;
 }
+
+.export-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.export-format {
+  height: 28px;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper-2);
+  color: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 9px;
+  outline: none;
+  cursor: pointer;
+}
+
+.export-format:focus {
+  border-color: var(--accent);
+}
+
+.finish-actions .export-format {
+  height: 34px;
+  padding: 0 8px;
+  font-size: 10px;
+}
+
+@media (max-width: 660px) {
+  .quiz-top {
+    flex-wrap: wrap;
+  }
+
+  .export-tools {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
