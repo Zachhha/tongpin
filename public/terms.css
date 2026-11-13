@@ -454,3 +454,25 @@ body { margin: 0; }
   .answer-actions .terms-btn { flex: 1; }
   .quiz-footnote { text-align: left; }
 }
+
+.quiz-export {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-family: var(--sans);
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.quiz-export:disabled {
+  color: var(--muted);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.finish-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

@@ -25,6 +25,8 @@ const nextButton = document.querySelector('#next-question');
 const finishText = document.querySelector('#finish-text');
 const finishAgain = document.querySelector('#finish-again');
 const backSetup = document.querySelector('#back-setup');
+const exportSessionButton = document.querySelector('#export-session');
+const finishExport = document.querySelector('#finish-export');
 const toastNode = document.querySelector('#terms-toast');
 
 let allItems = [];
@@ -35,6 +37,7 @@ let index = 0;
 let answered = false;
 let correct = 0;
 let scopeName = '';
+let answeredItems = [];
 
 function esc(value) {
   return String(value ?? '')
@@ -120,6 +123,9 @@ function startSession(items, label) {
   answered = false;
   correct = 0;
   scopeName = label;
+  answeredItems = [];
+  if (exportSessionButton) exportSessionButton.disabled = true;
+  if (finishExport) finishExport.disabled = true;
   setup.hidden = true;
   finish.hidden = true;
   quiz.hidden = false;
@@ -175,6 +181,11 @@ function showAnswer(isCorrect) {
   feedback.className = isCorrect ? 'feedback good' : 'feedback';
   feedback.textContent = isCorrect ? '答对了。' : '答案如下。';
   if (isCorrect) correct += 1;
+  if (!answeredItems.some((entry) => entry.term === item.term && entry.chapter === item.chapter)) {
+    answeredItems.push(item);
+  }
+  if (exportSessionButton) exportSessionButton.disabled = false;
+  if (finishExport) finishExport.disabled = false;
   quizCount.textContent = `第 ${index + 1} / ${deck.length} 题 · 答对 ${correct}`;
   nextButton.focus();
 }
@@ -216,8 +227,42 @@ function showFinish() {
   quiz.hidden = true;
   setup.hidden = true;
   finish.hidden = false;
-  finishText.textContent = `${scopeName}：共 ${deck.length} 题，答对 ${correct} 题。`;
+  finishText.textContent = `${scopeName}：共 ${deck.length} 题，答对 ${correct} 题，已记录 ${answeredItems.length} 个术语。`;
+  if (finishExport) finishExport.disabled = !answeredItems.length;
 }
+
+function exportAnswered() {
+  if (!answeredItems.length) {
+    toast('这轮还没有答过术语。');
+    return;
+  }
+  const now = new Date();
+  const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const lines = [
+    '# 同频术语复习',
+    '',
+    `范围：${scopeName}`,
+    `导出日期：${date}`,
+    `已答术语：${answeredItems.length} 个`,
+    '',
+  ];
+  answeredItems.forEach((item, i) => {
+    lines.push(`## ${i + 1}. ${item.term}`, '', `章节：${item.board} / ${item.chapter}`, '', item.answer, '');
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `同频术语复习_${date}.md`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast('已导出本次所答术语。');
+}
+
+exportSessionButton.addEventListener('click', exportAnswered);
+finishExport.addEventListener('click', exportAnswered);
 
 subjectGrid.addEventListener('click', (event) => {
   const button = event.target.closest('[data-subject]');

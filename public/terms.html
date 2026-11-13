@@ -40,6 +40,7 @@
           <div class="quiz-top">
             <button type="button" id="back-setup" class="quiz-back">← 换题库</button>
             <div class="quiz-progress"><span id="quiz-scope"></span><b id="quiz-count"></b></div>
+            <button type="button" id="export-session" class="quiz-export" disabled>导出本次所答</button>
           </div>
 
           <article class="quiz-card">
@@ -76,7 +77,10 @@
           <p class="terms-eyebrow">SESSION COMPLETE</p>
           <h2>这一轮复习完了。</h2>
           <p id="finish-text"></p>
-          <button type="button" id="finish-again" class="terms-btn terms-btn-primary">再选一个题库</button>
+          <div class="finish-actions">
+            <button type="button" id="finish-export" class="terms-btn">导出本次所答</button>
+            <button type="button" id="finish-again" class="terms-btn terms-btn-primary">再选一个题库</button>
+          </div>
         </section>
       </main>
     </div>
