@@ -48,6 +48,11 @@ const STATIC_FILES = new Map([
   ['/updates/', ['updates.html', 'text/html; charset=utf-8']],
   ['/updates.html', ['updates.html', 'text/html; charset=utf-8']],
   ['/updates.css', ['updates.css', 'text/css; charset=utf-8']],
+  ['/review', ['review.html', 'text/html; charset=utf-8']],
+  ['/review/', ['review.html', 'text/html; charset=utf-8']],
+  ['/review.html', ['review.html', 'text/html; charset=utf-8']],
+  ['/review.css', ['review.css', 'text/css; charset=utf-8']],
+  ['/review.js', ['review.js', 'text/javascript; charset=utf-8']],
 ]);
 
 function sendJson(res, status, payload) {
@@ -789,6 +794,19 @@ function createApp(options = {}) {
       await handleAction(req, res, async (body) => {
         const outcome = guess.leaveLobby(body.code, body.playerId, body.token);
         return { ok: true, deleted: outcome.deleted };
+      });
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/crisis/cards') {
+      sendJson(res, 200, { ok: true, cards: crisis.cards() });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/crisis/cards/review') {
+      await handleAction(req, res, async (body) => {
+        const result = crisis.reviewCard(body.id, body.action);
+        return { ok: true, ...result };
       });
       return;
     }

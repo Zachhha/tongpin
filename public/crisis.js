@@ -273,6 +273,7 @@ function crisisCard(crisis) {
     <p class="eyebrow">BREAKING / 本轮危机</p>
     <h2>${esc(crisis.title)}</h2>
     <ul class="crisis-facts">${crisis.facts.map((fact) => `<li>${esc(fact)}</li>`).join('')}</ul>
+    ${crisis.pr?.length ? `<div class="crisis-pr"><b>公关点</b><ul>${crisis.pr.map((point) => `<li>${esc(point)}</li>`).join('')}</ul></div>` : ''}
     <span class="crisis-heat">${esc(crisis.heat)}</span>
     ${detail}
   </section>`;

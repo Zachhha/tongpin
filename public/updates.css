@@ -272,3 +272,13 @@
     font-size: 23px;
   }
 }
+
+.updates-foot a {
+  color: var(--update-red);
+  text-decoration: none;
+}
+
+.updates-foot a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
