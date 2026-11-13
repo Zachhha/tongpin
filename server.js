@@ -53,6 +53,12 @@ const STATIC_FILES = new Map([
   ['/review.html', ['review.html', 'text/html; charset=utf-8']],
   ['/review.css', ['review.css', 'text/css; charset=utf-8']],
   ['/review.js', ['review.js', 'text/javascript; charset=utf-8']],
+  ['/terms', ['terms.html', 'text/html; charset=utf-8']],
+  ['/terms/', ['terms.html', 'text/html; charset=utf-8']],
+  ['/terms.html', ['terms.html', 'text/html; charset=utf-8']],
+  ['/terms.css', ['terms.css', 'text/css; charset=utf-8']],
+  ['/terms.js', ['terms.js', 'text/javascript; charset=utf-8']],
+  ['/terms-data.json', ['terms-data.json', 'application/json; charset=utf-8']],
 ]);
 
 function sendJson(res, status, payload) {

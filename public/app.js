@@ -176,6 +176,7 @@ function homeHeader() {
         <a href="/poem" class="mode-tab" data-mode="poem"><span class="mode-no">04</span><span class="mode-name">大文豪</span></a>
       </nav>
       <div class="home-utility-actions">
+        <a class="how-pill terms-pill" href="/terms">术语复习</a>
         <a class="how-pill changelog-pill" href="/updates">更新日志</a>
         <button type="button" class="how-pill" data-action="open-how">怎么玩</button>
       </div>

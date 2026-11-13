@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f3eee4" />
+    <title>看描述猜术语 · 同频</title>
+    <link rel="stylesheet" href="/terms.css" />
+  </head>
+  <body class="terms-body">
+    <div class="terms-shell">
+      <header class="terms-head">
+        <a class="terms-brand" href="/">同频 <small>TONGPIN</small></a>
+        <a class="terms-back" href="/">返回首页</a>
+      </header>
+
+      <main>
+        <section id="setup" class="terms-setup">
+          <p class="terms-eyebrow">TERM RECALL / 语言学复习</p>
+          <h1>看描述，<br /><em>猜术语。</em></h1>
+          <p class="terms-intro">选一个科目、一章，或直接从全部范围里随机。描述不会出现答案词。</p>
+
+          <div id="subject-grid" class="subject-grid"></div>
+
+          <div id="chapter-panel" class="chapter-panel" hidden>
+            <div class="chapter-head">
+              <b id="chapter-subject">选择章节</b>
+              <span id="chapter-count"></span>
+            </div>
+            <div id="chapter-list" class="chapter-list"></div>
+          </div>
+
+          <div class="setup-actions">
+            <button type="button" id="start-scope" class="terms-btn terms-btn-primary" disabled>开始复习</button>
+            <button type="button" id="start-all" class="terms-btn">所有范围随机</button>
+          </div>
+        </section>
+
+        <section id="quiz" class="terms-quiz" hidden>
+          <div class="quiz-top">
+            <button type="button" id="back-setup" class="quiz-back">← 换题库</button>
+            <div class="quiz-progress"><span id="quiz-scope"></span><b id="quiz-count"></b></div>
+          </div>
+
+          <article class="quiz-card">
+            <div class="quiz-kicker">READ THE DESCRIPTION</div>
+            <p id="quiz-prompt" class="quiz-prompt"></p>
+            <p id="quiz-hint" class="quiz-hint"></p>
+
+            <form id="answer-form" class="answer-form" autocomplete="off">
+              <label class="sr-only" for="answer-input">输入术语</label>
+              <input id="answer-input" type="text" inputmode="text" placeholder="输入你想到的术语" autocomplete="off" spellcheck="false" />
+              <button type="submit" class="terms-btn terms-btn-primary">提交</button>
+            </form>
+
+            <div id="feedback" class="feedback" role="status"></div>
+
+            <div id="answer-panel" class="answer-panel" hidden>
+              <div class="answer-label">ANSWER / 答案</div>
+              <p id="answer-text" class="answer-text"></p>
+              <div class="answer-actions">
+                <button type="button" id="reveal-answer" class="terms-btn terms-btn-ghost">显示答案</button>
+                <button type="button" id="next-question" class="terms-btn terms-btn-primary">下一题</button>
+              </div>
+            </div>
+
+            <div id="reveal-bar" class="reveal-bar">
+              <button type="button" id="reveal-only" class="terms-btn terms-btn-ghost">不会，显示答案</button>
+            </div>
+          </article>
+
+          <p class="quiz-footnote">答对或显示答案后，会给出完整定义和例子。</p>
+        </section>
+
+        <section id="finish" class="terms-finish" hidden>
+          <p class="terms-eyebrow">SESSION COMPLETE</p>
+          <h2>这一轮复习完了。</h2>
+          <p id="finish-text"></p>
+          <button type="button" id="finish-again" class="terms-btn terms-btn-primary">再选一个题库</button>
+        </section>
+      </main>
+    </div>
+    <div id="terms-toast" class="terms-toast" aria-live="polite"></div>
+    <script src="/terms.js" defer></script>
+  </body>
+</html>
