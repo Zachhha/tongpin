@@ -193,6 +193,15 @@ async function refresh() {
   }
 }
 
+function modeSwitch() {
+  return `<nav class="page-mode-switch" aria-label="切换游戏模式">
+    <a href="/">同频猜词</a>
+    <a href="/guess">满分猜分</a>
+    <a href="/crisis" class="active" aria-current="page">危机公关</a>
+    <a href="/poem">大文豪</a>
+  </nav>`;
+}
+
 function headerMarkup(room) {
   return `<header class="crisis-head">
     <a class="crisis-brand" href="/" aria-label="同频首页">
@@ -202,10 +211,10 @@ function headerMarkup(room) {
     </a>
     <div class="crisis-head-tools">
       ${room?.viewer?.isSpectator ? '<span class="crisis-watch-badge">观战</span>' : ''}
-      <a href="/">← 返回首页</a>
       ${room ? `<button class="crisis-room-pill" data-action="crisis-copy-code"><span>ROOM</span> <b>${esc(room.code)}</b></button>` : ''}
     </div>
-  </header>`;
+  </header>
+  ${modeSwitch()}`;
 }
 
 function footMarkup() {
@@ -256,11 +265,16 @@ function landingMarkup() {
 }
 
 function crisisCard(crisis) {
+  const detail = crisis.detail
+    ? `<button class="crisis-detail-toggle" data-action="crisis-toggle-detail" aria-expanded="false">展开短新闻 <span>+</span></button>
+       <div class="crisis-detail" hidden><p>${esc(crisis.detail)}</p></div>`
+    : '';
   return `<section class="crisis-crisis-card">
     <p class="eyebrow">BREAKING / 本轮危机</p>
     <h2>${esc(crisis.title)}</h2>
     <ul class="crisis-facts">${crisis.facts.map((fact) => `<li>${esc(fact)}</li>`).join('')}</ul>
     <span class="crisis-heat">${esc(crisis.heat)}</span>
+    ${detail}
   </section>`;
 }
 
@@ -659,6 +673,14 @@ document.addEventListener('click', (event) => {
   } else if (actionName === 'crisis-copy-watch' && C.room) {
     event.preventDefault();
     copyText(watchUrl(C.room.code), '观战链接已复制');
+  } else if (actionName === 'crisis-toggle-detail') {
+    event.preventDefault();
+    const panel = target.nextElementSibling;
+    if (!panel) return;
+    const open = panel.hidden;
+    panel.hidden = !open;
+    target.setAttribute('aria-expanded', String(open));
+    target.innerHTML = open ? '收起短新闻 <span>−</span>' : '展开短新闻 <span>+</span>';
   } else if (actionName === 'crisis-copy-share' && C.room) {
     event.preventDefault();
     copyText(shareMessage(C.room.code), '对局邀请和观战邀请已一起复制');

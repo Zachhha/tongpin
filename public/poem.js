@@ -186,6 +186,15 @@ async function refresh() {
   }
 }
 
+function modeSwitch() {
+  return `<nav class="page-mode-switch" aria-label="切换游戏模式">
+    <a href="/">同频猜词</a>
+    <a href="/guess">满分猜分</a>
+    <a href="/crisis">危机公关</a>
+    <a href="/poem" class="active" aria-current="page">大文豪</a>
+  </nav>`;
+}
+
 function header(room) {
   return `<header class="poem-head">
     <a class="poem-brand" href="/" aria-label="同频首页">
@@ -194,10 +203,10 @@ function header(room) {
     </a>
     <div class="poem-head-right">
       ${room?.viewer?.isSpectator ? '<span class="poem-room-pill">观战</span>' : ''}
-      <a href="/">← 返回首页</a>
       ${room ? `<button class="poem-room-pill" data-action="poem-copy-code">ROOM <b>${esc(room.code)}</b></button>` : ''}
     </div>
-  </header>`;
+  </header>
+  ${modeSwitch()}`;
 }
 
 function foot() {

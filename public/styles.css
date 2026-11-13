@@ -4561,3 +4561,57 @@ a {
   background: #333;
   color: var(--paper-2);
 }
+
+/* Shared mode switch under the header on every game page */
+.page-mode-switch {
+  width: min(1220px, calc(100% - 14vw));
+  margin: 4px auto 0;
+  padding: 5px 0 7px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: none;
+}
+
+.page-mode-switch::-webkit-scrollbar {
+  display: none;
+}
+
+.page-mode-switch a {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.16s, color 0.16s;
+}
+
+.page-mode-switch a:hover {
+  background: var(--paper-3);
+  color: var(--ink);
+}
+
+.page-mode-switch a.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper-2);
+}
+
+@media (max-width: 660px) {
+  .page-mode-switch {
+    width: calc(100% - 36px);
+    gap: 2px;
+    padding-top: 3px;
+  }
+
+  .page-mode-switch a {
+    padding: 6px 8px;
+    font-size: 9px;
+  }
+}

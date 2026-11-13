@@ -249,8 +249,13 @@ function adopt(data) {
   render();
 }
 
-function modeLink() {
-  return '<a class="guess-mode-link" href="/">← 猜词模式</a>';
+function modeSwitch() {
+  return `<nav class="page-mode-switch" aria-label="切换游戏模式">
+    <a href="/">同频猜词</a>
+    <a href="/guess" class="active" aria-current="page">满分猜分</a>
+    <a href="/crisis">危机公关</a>
+    <a href="/poem">大文豪</a>
+  </nav>`;
 }
 
 function headerMarkup(room) {
@@ -262,10 +267,10 @@ function headerMarkup(room) {
     </a>
     <div class="guess-head-tools">
       ${room?.viewer?.isSpectator ? '<span class="guess-watch-badge">观战</span>' : ''}
-      ${modeLink()}
       ${room ? `<button type="button" class="guess-room-pill" data-action="guess-copy-code" title="复制房间码"><span>ROOM</span><b>${esc(room.code)}</b></button>` : ''}
     </div>
-  </header>`;
+  </header>
+  ${modeSwitch()}`;
 }
 
 function footMarkup() {
