@@ -4351,6 +4351,7 @@ a {
 .mode-tab[data-mode="guess"] { --tone: #7c3aed; }
 .mode-tab[data-mode="crisis"] { --tone: #0f8f84; }
 .mode-tab[data-mode="poem"] { --tone: #2f2f2b; }
+.mode-tab[data-mode="number"] { --tone: #2563eb; }
 
 .mode-tab:hover {
   background: rgba(17, 17, 17, 0.055);
@@ -4440,7 +4441,7 @@ a {
 
   .mode-dock {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     flex: 1;
     gap: 2px;
     padding: 3px;
@@ -4613,5 +4614,100 @@ a {
   .page-mode-switch a {
     padding: 6px 8px;
     font-size: 9px;
+  }
+}
+
+@media (max-width: 780px) {
+  .mode-dock {
+    width: 100%;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    overflow: hidden;
+  }
+
+  .mode-tab {
+    min-width: 0;
+    gap: 1px;
+    padding: 8px 0;
+  }
+
+  .mode-tab::before {
+    display: none;
+  }
+
+  .mode-name {
+    font-size: 9px;
+    letter-spacing: -0.08em;
+  }
+
+  .home-utility-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .home-utility-actions .how-pill {
+    min-width: 0;
+    padding: 0 6px;
+  }
+}
+
+@media (max-width: 780px) {
+  .home-head-right {
+    max-width: calc(100vw - 40px);
+    min-width: 0;
+  }
+
+  .mode-dock {
+    width: 350px !important;
+    max-width: calc(100vw - 40px) !important;
+    min-width: 0;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .mode-tab {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .mode-name {
+    font-size: 8.5px;
+  }
+}
+
+@media (max-width: 780px) {
+  .mode-dock {
+    display: flex !important;
+    width: calc(100vw - 36px) !important;
+    max-width: calc(100vw - 36px) !important;
+    gap: 1px;
+    overflow: hidden;
+  }
+
+  .mode-tab {
+    flex: 1 1 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    justify-content: center;
+    gap: 0;
+    padding: 8px 0 !important;
+    overflow: hidden;
+  }
+
+  .mode-name {
+    font-size: 8.5px !important;
+    letter-spacing: -0.08em;
+    white-space: nowrap;
+  }
+}
+
+.number-pill {
+  display: none;
+}
+
+@media (max-width: 780px) {
+  .number-pill {
+    display: inline-flex;
+    border-color: #2563eb;
+    color: #1d4ed8;
   }
 }

@@ -8,6 +8,7 @@ const { GameStore, GameError } = require('./lib/game');
 const { GuessStore } = require('./lib/guess');
 const { CrisisStore } = require('./lib/crisis');
 const { PoemStore } = require('./lib/poem');
+const { NumberStore } = require('./lib/number');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DEFAULT_PORT = Number(process.env.PORT) || 8787;
@@ -53,6 +54,11 @@ const STATIC_FILES = new Map([
   ['/review.html', ['review.html', 'text/html; charset=utf-8']],
   ['/review.css', ['review.css', 'text/css; charset=utf-8']],
   ['/review.js', ['review.js', 'text/javascript; charset=utf-8']],
+  ['/number', ['number.html', 'text/html; charset=utf-8']],
+  ['/number/', ['number.html', 'text/html; charset=utf-8']],
+  ['/number.html', ['number.html', 'text/html; charset=utf-8']],
+  ['/number.css', ['number.css', 'text/css; charset=utf-8']],
+  ['/number.js', ['number.js', 'text/javascript; charset=utf-8']],
   ['/terms', ['terms.html', 'text/html; charset=utf-8']],
   ['/terms/', ['terms.html', 'text/html; charset=utf-8']],
   ['/terms.html', ['terms.html', 'text/html; charset=utf-8']],
@@ -154,6 +160,7 @@ function createApp(options = {}) {
   const guess = new GuessStore();
   const crisis = new CrisisStore();
   const poem = new PoemStore();
+  const number = new NumberStore();
   const publicUrl = normalizePublicUrl(
     options.publicUrl ||
       process.env.PUBLIC_URL ||
@@ -1118,6 +1125,99 @@ function createApp(options = {}) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/number/state') {
+      try {
+        const room = number.room(url.searchParams.get('code'));
+        const role = url.searchParams.get('role') === 'spectator' ? 'spectator' : 'player';
+        sendJson(res, 200, { ok: true, state: number.view(room, url.searchParams.get('playerId'), role) });
+      } catch (error) {
+        sendJson(res, error.status || 500, { error: error.message || '读取失败。' });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/number/rooms') {
+      await handleAction(req, res, async (body) => {
+        const { room, player } = number.createRoom(body.name);
+        return { code: room.code, playerId: player.id, token: player.token, role: 'player', state: number.view(room, player.id) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/number/join') {
+      await handleAction(req, res, async (body) => {
+        const { room, player } = number.joinRoom(body.code, body.name);
+        return { code: room.code, playerId: player.id, token: player.token, role: 'player', state: number.view(room, player.id) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/number/spectate') {
+      await handleAction(req, res, async (body) => {
+        const { room, spectator } = number.addSpectator(body.code, body.name);
+        return { code: room.code, playerId: spectator.id, token: spectator.token, role: 'spectator', name: spectator.name, state: number.view(room, spectator.id, 'spectator') };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/number/rejoin') {
+      await handleAction(req, res, async (body) => {
+        const role = body.role === 'spectator' ? 'spectator' : 'player';
+        const outcome = number.rejoin(body.code, body.playerId, body.token, role);
+        const member = role === 'spectator' ? outcome.spectator : outcome.player;
+        return { code: outcome.room.code, playerId: member.id, token: member.token, role, name: member.name, state: number.view(outcome.room, member.id, role) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/number/leave') {
+      await handleAction(req, res, async (body) => {
+        const outcome = number.leave(body.code, body.playerId, body.token);
+        return { ok: true, deleted: outcome.deleted };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/number/spectate/leave') {
+      await handleAction(req, res, async (body) => {
+        number.leaveSpectator(body.code, body.playerId, body.token);
+        return { ok: true };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/number/start') {
+      await handleAction(req, res, async (body) => {
+        const { room } = number.start(body.code, body.playerId, body.token);
+        return { ok: true, state: number.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/number/secret') {
+      await handleAction(req, res, async (body) => {
+        const { room } = number.submitSecret(body.code, body.playerId, body.token, body.secret);
+        return { ok: true, state: number.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/number/guess') {
+      await handleAction(req, res, async (body) => {
+        const { room } = number.submitGuess(body.code, body.playerId, body.token, body.guess);
+        return { ok: true, state: number.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/number/restart') {
+      await handleAction(req, res, async (body) => {
+        const { room } = number.restart(body.code, body.playerId, body.token);
+        return { ok: true, state: number.view(room, body.playerId) };
+      });
+      return;
+    }
+
     if (req.method === 'GET' || req.method === 'HEAD') {
       await serveStatic(req, res, url.pathname);
       return;
@@ -1158,6 +1258,11 @@ function createApp(options = {}) {
       if (room.phase === 'chars') poem.finishChars(room);
       else if (room.phase === 'writing') poem.finishWriting(room);
       else if (room.phase === 'voting') poem.finishVoting(room);
+    }
+    for (const room of number.rooms.values()) {
+      if (!room.roundEndsAt || Date.now() < room.roundEndsAt) continue;
+      if (room.phase === 'secrets') number.finishSecrets(room);
+      else if (room.phase === 'guessing') number.finishRound(room);
     }
   }, 200);
 

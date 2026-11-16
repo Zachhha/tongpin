@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#080b16" />
+    <title>猜数字 · 同频</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/number.css" />
+  </head>
+  <body class="number-body">
+    <div class="number-shell">
+      <header class="number-head">
+        <a class="number-brand" href="/" aria-label="同频首页">
+          <span class="number-pixel-logo" aria-hidden="true">▚</span>
+          <span>同频<small>TONGPIN</small></span>
+        </a>
+        <span class="number-mode-tag">猜数字</span>
+      </header>
+      <nav class="page-mode-switch number-mode-switch" aria-label="切换游戏模式">
+        <a href="/">同频猜词</a>
+        <a href="/guess">满分猜分</a>
+        <a href="/crisis">危机公关</a>
+        <a href="/poem">大文豪</a>
+        <a href="/number" class="active" aria-current="page">猜数字</a>
+      </nav>
+      <main id="number-app" class="number-main" aria-live="polite">
+        <div class="number-loading">LOADING<span class="number-cursor">▮</span></div>
+      </main>
+      <footer class="number-foot"><span>TONGPIN © 2026</span><span>4 DIGITS · 30 SEC</span></footer>
+    </div>
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+    <script src="/number.js" defer></script>
+  </body>
+</html>

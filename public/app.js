@@ -174,10 +174,12 @@ function homeHeader() {
         <a href="/guess" class="mode-tab" data-mode="guess"><span class="mode-no">02</span><span class="mode-name">满分猜分</span></a>
         <a href="/crisis" class="mode-tab" data-mode="crisis"><span class="mode-no">03</span><span class="mode-name">危机公关</span></a>
         <a href="/poem" class="mode-tab" data-mode="poem"><span class="mode-no">04</span><span class="mode-name">大文豪</span></a>
+        <a href="/number" class="mode-tab" data-mode="number"><span class="mode-no">05</span><span class="mode-name">猜数字</span></a>
       </nav>
       <div class="home-utility-actions">
         <a class="how-pill terms-pill" href="/terms">术语复习</a>
         <a class="how-pill changelog-pill" href="/updates">更新日志</a>
+        <a class="how-pill number-pill" href="/number">猜数字</a>
         <button type="button" class="how-pill" data-action="open-how">怎么玩</button>
       </div>
     </div>

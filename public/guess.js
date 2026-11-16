@@ -255,6 +255,7 @@ function modeSwitch() {
     <a href="/guess" class="active" aria-current="page">满分猜分</a>
     <a href="/crisis">危机公关</a>
     <a href="/poem">大文豪</a>
+    <a href="/number">猜数字</a>
   </nav>`;
 }
 
