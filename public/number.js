@@ -377,7 +377,7 @@ function downloadResult() {
 function dualLinks() {
   const player = `${location.origin}/number?code=${encodeURIComponent(state.code)}`;
   const watch = `${location.origin}/number?code=${encodeURIComponent(state.code)}&watch=1`;
-  return `同频猜数字，房间 ${state.code}\n玩家链接：${player}\n观战链接：${watch}`;
+  return `🔢 同频猜数字，房间 ${state.code}\n🎮 玩家链接：${player}\n👀 观战链接：${watch}`;
 }
 
 async function handleAction(action) {
@@ -399,7 +399,7 @@ async function handleAction(action) {
     } else if (action === 'copy-links') {
       await copyText(dualLinks());
     } else if (action === 'copy-watch') {
-      await copyText(`来观战同频猜数字：${location.origin}/number?code=${encodeURIComponent(state.code)}&watch=1`);
+      await copyText(`👀 来观战同频猜数字：${location.origin}/number?code=${encodeURIComponent(state.code)}&watch=1`);
     } else if (action === 'share-result') {
       const text = resultText();
       if (navigator.share) {
