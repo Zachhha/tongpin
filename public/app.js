@@ -175,6 +175,7 @@ function homeHeader() {
         <a href="/crisis" class="mode-tab" data-mode="crisis"><span class="mode-no">03</span><span class="mode-name">危机公关</span></a>
         <a href="/poem" class="mode-tab" data-mode="poem"><span class="mode-no">04</span><span class="mode-name">大文豪</span></a>
         <a href="/number" class="mode-tab" data-mode="number"><span class="mode-no">05</span><span class="mode-name">猜数字</span></a>
+        <a href="/dragon" class="mode-tab" data-mode="dragon"><span class="mode-no">06</span><span class="mode-name">找奶龙</span></a>
       </nav>
       <nav class="page-mode-switch home-mobile-modes" aria-label="切换游戏模式">
         <a href="/" class="active" aria-current="page">同频猜词</a>
@@ -182,6 +183,7 @@ function homeHeader() {
         <a href="/crisis">危机公关</a>
         <a href="/poem">大文豪</a>
         <a href="/number">猜数字</a>
+        <a href="/dragon">找奶龙</a>
       </nav>
       <div class="home-utility-actions">
         <a class="how-pill terms-pill" href="/terms">术语复习</a>

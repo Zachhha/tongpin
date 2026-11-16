@@ -200,6 +200,7 @@ function modeSwitch() {
     <a href="/crisis" class="active" aria-current="page">危机公关</a>
     <a href="/poem">大文豪</a>
     <a href="/number">猜数字</a>
+    <a href="/dragon">找奶龙</a>
   </nav>`;
 }
 

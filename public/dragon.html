@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#fff4ce" />
+    <title>找奶龙 · 同频</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/dragon.css" />
+  </head>
+  <body class="dragon-body">
+    <div class="dragon-shell">
+      <header class="dragon-head">
+        <a class="dragon-brand" href="/" aria-label="同频首页">
+          <span class="dragon-brand-face" aria-hidden="true"><i></i><i></i></span>
+          <span>同频<small>TONGPIN</small></span>
+        </a>
+        <span class="dragon-mode-tag">找奶龙</span>
+      </header>
+      <nav class="page-mode-switch dragon-mode-switch" aria-label="切换游戏模式">
+        <a href="/">同频猜词</a>
+        <a href="/guess">满分猜分</a>
+        <a href="/crisis">危机公关</a>
+        <a href="/poem">大文豪</a>
+        <a href="/number">猜数字</a>
+        <a href="/dragon" class="active" aria-current="page">找奶龙</a>
+      </nav>
+      <main id="dragon-app" class="dragon-main" aria-live="polite">
+        <div class="dragon-loading">奶龙正在搬格子…</div>
+      </main>
+      <footer class="dragon-foot"><span>TONGPIN © 2026</span><span>每行 · 每列 · 每色块 · 一头奶龙</span></footer>
+    </div>
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+    <script src="/dragon.js" defer></script>
+  </body>
+</html>

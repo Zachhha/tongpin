@@ -9,6 +9,7 @@ const { GuessStore } = require('./lib/guess');
 const { CrisisStore } = require('./lib/crisis');
 const { PoemStore } = require('./lib/poem');
 const { NumberStore } = require('./lib/number');
+const { DragonStore } = require('./lib/dragon');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DEFAULT_PORT = Number(process.env.PORT) || 8787;
@@ -59,6 +60,11 @@ const STATIC_FILES = new Map([
   ['/number.html', ['number.html', 'text/html; charset=utf-8']],
   ['/number.css', ['number.css', 'text/css; charset=utf-8']],
   ['/number.js', ['number.js', 'text/javascript; charset=utf-8']],
+  ['/dragon', ['dragon.html', 'text/html; charset=utf-8']],
+  ['/dragon/', ['dragon.html', 'text/html; charset=utf-8']],
+  ['/dragon.html', ['dragon.html', 'text/html; charset=utf-8']],
+  ['/dragon.css', ['dragon.css', 'text/css; charset=utf-8']],
+  ['/dragon.js', ['dragon.js', 'text/javascript; charset=utf-8']],
   ['/terms', ['terms.html', 'text/html; charset=utf-8']],
   ['/terms/', ['terms.html', 'text/html; charset=utf-8']],
   ['/terms.html', ['terms.html', 'text/html; charset=utf-8']],
@@ -161,6 +167,7 @@ function createApp(options = {}) {
   const crisis = new CrisisStore();
   const poem = new PoemStore();
   const number = new NumberStore();
+  const dragon = new DragonStore();
   const publicUrl = normalizePublicUrl(
     options.publicUrl ||
       process.env.PUBLIC_URL ||
@@ -1222,6 +1229,107 @@ function createApp(options = {}) {
       await handleAction(req, res, async (body) => {
         const { room } = number.restart(body.code, body.playerId, body.token);
         return { ok: true, state: number.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/dragon/state') {
+      try {
+        const room = dragon.room(url.searchParams.get('code'));
+        const role = url.searchParams.get('role') === 'spectator' ? 'spectator' : 'player';
+        sendJson(res, 200, { ok: true, state: dragon.view(room, url.searchParams.get('playerId'), role) });
+      } catch (error) {
+        sendJson(res, error.status || 500, { error: error.message || '读取失败。' });
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/dragon/rooms') {
+      await handleAction(req, res, async (body) => {
+        const { room, player } = dragon.createRoom(body.name);
+        return { code: room.code, playerId: player.id, token: player.token, role: 'player', state: dragon.view(room, player.id) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/dragon/join') {
+      await handleAction(req, res, async (body) => {
+        const { room, player } = dragon.joinRoom(body.code, body.name);
+        return { code: room.code, playerId: player.id, token: player.token, role: 'player', state: dragon.view(room, player.id) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/dragon/spectate') {
+      await handleAction(req, res, async (body) => {
+        const { room, spectator } = dragon.addSpectator(body.code, body.name);
+        return { code: room.code, playerId: spectator.id, token: spectator.token, role: 'spectator', name: spectator.name, state: dragon.view(room, spectator.id, 'spectator') };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/dragon/rejoin') {
+      await handleAction(req, res, async (body) => {
+        const role = body.role === 'spectator' ? 'spectator' : 'player';
+        const outcome = dragon.rejoin(body.code, body.playerId, body.token, role);
+        const member = role === 'spectator' ? outcome.spectator : outcome.player;
+        return { code: outcome.room.code, playerId: member.id, token: member.token, role, name: member.name, state: dragon.view(outcome.room, member.id, role) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/dragon/leave') {
+      await handleAction(req, res, async (body) => {
+        const outcome = dragon.leave(body.code, body.playerId, body.token);
+        return { ok: true, deleted: outcome.deleted };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/dragon/spectate/leave') {
+      await handleAction(req, res, async (body) => {
+        dragon.leaveSpectator(body.code, body.playerId, body.token);
+        return { ok: true };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/dragon/settings') {
+      await handleAction(req, res, async (body) => {
+        const { room } = dragon.settings(body.code, body.playerId, body.token, body);
+        return { ok: true, state: dragon.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/dragon/start') {
+      await handleAction(req, res, async (body) => {
+        const { room } = dragon.start(body.code, body.playerId, body.token);
+        return { ok: true, state: dragon.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/dragon/tap') {
+      await handleAction(req, res, async (body) => {
+        const { room } = dragon.tap(body.code, body.playerId, body.token, body.index, body.value);
+        return { ok: true, state: dragon.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/dragon/hint') {
+      await handleAction(req, res, async (body) => {
+        const { room, hint } = dragon.hint(body.code, body.playerId, body.token);
+        return { ok: true, hint, state: dragon.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/dragon/restart') {
+      await handleAction(req, res, async (body) => {
+        const { room } = dragon.restart(body.code, body.playerId, body.token);
+        return { ok: true, state: dragon.view(room, body.playerId) };
       });
       return;
     }

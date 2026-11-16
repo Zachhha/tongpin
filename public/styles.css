@@ -4352,6 +4352,7 @@ a {
 .mode-tab[data-mode="crisis"] { --tone: #0f8f84; }
 .mode-tab[data-mode="poem"] { --tone: #2f2f2b; }
 .mode-tab[data-mode="number"] { --tone: #2563eb; }
+.mode-tab[data-mode="dragon"] { --tone: #f0b91f; }
 
 .mode-tab:hover {
   background: rgba(17, 17, 17, 0.055);
