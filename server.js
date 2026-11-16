@@ -1335,6 +1335,14 @@ function createApp(options = {}) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/dragon/reveal') {
+      await handleAction(req, res, async (body) => {
+        const { room } = dragon.reveal(body.code, body.playerId, body.token);
+        return { ok: true, state: dragon.view(room, body.playerId) };
+      });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/dragon/restart') {
       await handleAction(req, res, async (body) => {
         const { room } = dragon.restart(body.code, body.playerId, body.token);

@@ -839,3 +839,21 @@
   color: rgba(255, 255, 255, 0.78);
   font-size: clamp(18px, 3.8vw, 32px);
 }
+
+.dragon-answer-wrap {
+  width: min(100%, 720px);
+  margin: 13px auto 16px;
+}
+
+.dragon-answer-label {
+  margin: 0 0 7px;
+  color: #a39a89;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.dragon-answer-wrap .dragon-board {
+  width: 100%;
+}

@@ -258,26 +258,57 @@ function gameTemplate() {
       ${panelHead('PLAYERS / 玩家', 'LIVE')}
       <div class="dragon-panel-body">
         ${state.players.map(seatTemplate).join('')}
-        <div class="dragon-btn-row"><button class="dragon-btn secondary" data-action="copy-links">复制双链接</button></div>
+        <div class="dragon-btn-row">
+          <button class="dragon-btn secondary" data-action="copy-links">复制双链接</button>
+          ${state.viewer.isHost ? '<button class="dragon-btn secondary" data-action="reveal">公布答案</button>' : ''}
+          <button class="dragon-btn ghost" data-action="exit">退出本局</button>
+        </div>
         <p class="dragon-hint" style="margin-top:10px">${state.mode === 'coop' ? '合作模式：所有人共用一块棋盘，提示不限次数。' : '竞速模式：每人一块同样棋盘，提示最多 3 次；先完成者赢。'}</p>
       </div>
     </div>
   </div>`;
 }
 
+function answerBoardTemplate() {
+  const size = state.size;
+  const answer = new Set(state.answer || []);
+  const blocked = new Set(state.blocked || []);
+  const cells = Array.from({ length: size * size }, (_, index) => {
+    const region = state.regions?.[index] ?? 0;
+    const color = REGION_COLORS[region % REGION_COLORS.length];
+    let content = '';
+    if (answer.has(index)) content = '<img class="nailong-img" src="/nailong.png" alt="" draggable="false" />';
+    else if (blocked.has(index)) content = '<span class="cross">×</span>';
+    return `<div class="dragon-cell ${blocked.has(index) ? 'given' : ''}" style="--cell:${color}">${content}</div>`;
+  }).join('');
+  return `<div class="dragon-answer-wrap"><p class="dragon-answer-label">ANSWER / 唯一解</p><div class="dragon-board" style="--n:${size}">${cells}</div></div>`;
+}
+
 function finishedTemplate() {
   const winner = state.players.find((player) => player.id === state.winnerId);
+  const revealed = state.revealed;
+  const title = revealed
+    ? '答案已公布'
+    : state.mode === 'coop'
+      ? '奶龙全部找到了'
+      : `${esc(winner?.name || '有人')} 先找到`;
+  const note = revealed
+    ? '本局已结束，绿色奶龙就是唯一答案。'
+    : state.mode === 'coop'
+      ? '合作模式完成，大家一起通关。'
+      : '先正确放完所有奶龙的人获胜。';
   return `<div class="dragon-finish">
-    <p class="dragon-kicker">${state.mode === 'coop' ? 'CO-OP CLEAR' : 'RACE OVER'}</p>
-    <h2>${state.mode === 'coop' ? '奶龙全部找到了' : `${esc(winner?.name || '有人')} 先找到`}</h2>
-    <p>${state.mode === 'coop' ? '合作模式完成，大家一起通关。' : '先正确放完所有奶龙的人获胜。'}</p>
+    <p class="dragon-kicker">${revealed ? 'ANSWER REVEALED' : state.mode === 'coop' ? 'CO-OP CLEAR' : 'RACE OVER'}</p>
+    <h2>${title}</h2>
+    <p>${note}</p>
+    ${answerBoardTemplate()}
     <div class="dragon-btn-row">
       ${state.canRestart ? '<button class="dragon-btn" data-action="restart">再来一局</button>' : ''}
       <button class="dragon-btn secondary" data-action="share-result">分享结果</button>
       <button class="dragon-btn secondary" data-action="copy-result">复制文本</button>
       <button class="dragon-btn secondary" data-action="export-result">导出 TXT</button>
       <button class="dragon-btn secondary" data-action="copy-links">复制双链接</button>
-      <button class="dragon-btn ghost" data-action="home">返回大厅</button>
+      <button class="dragon-btn ghost" data-action="exit">退出本局</button>
     </div>
   </div>`;
 }
@@ -321,12 +352,17 @@ async function copyText(text) {
 
 function resultText() {
   const winner = state.players.find((player) => player.id === state.winnerId);
+  const result = state.revealed
+    ? '答案已公布'
+    : state.mode === 'coop'
+      ? '合作通关'
+      : `${winner?.name || '有人'} 获胜`;
   return [
     '🐉 同频找奶龙',
     `房间：${state.code}`,
     `模式：${state.mode === 'coop' ? '合作' : '竞速'}`,
     `棋盘：${state.size}×${state.size}`,
-    `结果：${state.mode === 'coop' ? '合作通关' : `${winner?.name || '有人'} 获胜`}`,
+    `结果：${result}`,
   ].join('\n');
 }
 
@@ -373,6 +409,17 @@ async function handleAction(action) {
       await copyText(resultText());
     } else if (action === 'export-result') {
       downloadResult();
+    } else if (action === 'reveal') {
+      if (!window.confirm('公布答案会结束本局，确定吗？')) return;
+      const data = await api('/api/dragon/reveal', { code: session.code, playerId: session.playerId, token: session.token });
+      state = data.state;
+      renderState();
+    } else if (action === 'exit') {
+      await api('/api/dragon/leave', { code: session.code, playerId: session.playerId, token: session.token });
+      saveSession(null);
+      state = null;
+      stopPolling();
+      location.href = '/';
     } else if (action === 'hint') {
       const data = await api('/api/dragon/hint', { code: session.code, playerId: session.playerId, token: session.token });
       state = data.state;
