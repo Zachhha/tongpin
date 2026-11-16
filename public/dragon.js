@@ -205,17 +205,19 @@ function boardTemplate() {
   const board = state.board || {};
   const own = state.players.find((player) => player.isYou);
   const remaining = Math.max(0, size - (own?.count || 0));
+  const blocked = new Set(state.blocked || []);
   const cells = Array.from({ length: size * size }, (_, index) => {
     const region = state.regions?.[index] ?? 0;
     const value = board[index] || board[String(index)] || '';
     const color = REGION_COLORS[region % REGION_COLORS.length];
+    const given = blocked.has(index);
     let content = '';
-    if (value === 'dragon') {
-      content = '<img class="nailong-img" src="/nailong.png" alt="" draggable="false" />';
-    } else if (value === 'x') {
+    if (given || value === 'x') {
       content = '<span class="cross">×</span>';
+    } else if (value === 'dragon') {
+      content = '<img class="nailong-img" src="/nailong.png" alt="" draggable="false" />';
     }
-    return `<button type="button" class="dragon-cell ${hintCell === index ? 'hinted' : ''}" data-cell="${index}" style="--cell:${color}" aria-label="第 ${Math.floor(index / size) + 1} 行第 ${index % size + 1} 列">${content}</button>`;
+    return `<button type="button" class="dragon-cell ${given ? 'given' : ''} ${hintCell === index ? 'hinted' : ''}" data-cell="${index}" ${given ? 'data-blocked="1"' : ''} style="--cell:${color}" aria-label="第 ${Math.floor(index / size) + 1} 行第 ${index % size + 1} 列">${content}</button>`;
   }).join('');
   return `<div class="dragon-board-wrap">
     <div class="dragon-hud">
@@ -396,6 +398,7 @@ function markXLocal(index) {
 async function handleCell(index) {
   if (suppressClick) return;
   if (!state || state.viewer.isSpectator || state.phase !== 'playing') return;
+  if ((state.blocked || []).includes(index)) return;
   const current = state.board[index] || state.board[String(index)] || 'empty';
   const value = current === tool ? 'empty' : tool;
   try {
@@ -411,7 +414,7 @@ async function handleCell(index) {
 function startDrag(event) {
   if (tool !== 'x' || !state || state.viewer.isSpectator || state.phase !== 'playing') return;
   const cell = event.target.closest('[data-cell]');
-  if (!cell) return;
+  if (!cell || cell.dataset.blocked) return;
   const index = Number(cell.dataset.cell);
   const value = state.board[index] || state.board[String(index)] || 'empty';
   if (value === 'dragon') return;
@@ -429,6 +432,7 @@ function moveDrag(event) {
   const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.('[data-cell]');
   if (!target) return;
   const index = Number(target.dataset.cell);
+  if (target.dataset.blocked) return;
   if (drag.seen.has(index)) return;
   drag.seen.add(index);
   const value = state.board[index] || state.board[String(index)] || 'empty';

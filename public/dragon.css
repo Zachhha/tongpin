@@ -829,3 +829,13 @@
   object-fit: contain;
   pointer-events: none;
 }
+
+.dragon-cell.given {
+  cursor: default;
+  filter: saturate(0.72) brightness(0.98);
+}
+
+.dragon-cell.given .cross {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: clamp(18px, 3.8vw, 32px);
+}
