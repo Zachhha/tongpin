@@ -1202,6 +1202,14 @@ function createApp(options = {}) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/number/draft') {
+      await handleAction(req, res, async (body) => {
+        const { room } = number.submitDraft(body.code, body.playerId, body.token, body.kind, body.value);
+        return { ok: true, state: number.view(room, body.playerId) };
+      });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/number/guess') {
       await handleAction(req, res, async (body) => {
         const { room } = number.submitGuess(body.code, body.playerId, body.token, body.guess);

@@ -8,6 +8,8 @@ let session = readSession();
 let state = null;
 let pollTimer = null;
 let tickTimer = null;
+let draftSaveTimer = null;
+let lastDraft = '';
 let errorMessage = '';
 
 function readSession() {
@@ -211,9 +213,9 @@ function secretTemplate() {
     <div class="number-panel">
       ${roomHeaderTemplate('SET SECRET / 设置数字', `ROOM ${state.code}`)}
       <div class="number-panel-body">
-        <div class="number-timer" data-number-timer>${remainingSeconds() ?? '--'}s</div>
+        <div class="number-timer number-timer-large" data-number-timer>${remainingSeconds() ?? '--'}s</div>
         <p class="number-muted">设置你的 4 位秘密数字。首位不能是 0，数字可以重复。</p>
-        ${submitted ? `<div class="number-digital">${[...own.secret].map((digit) => `<span>${esc(digit)}</span>`).join('')}</div><p class="number-ready" style="margin-top:12px">已设置，等待其他人…</p>` : `<form data-form="secret"><div class="number-field"><label>4 位数字</label><input class="number-input" name="secret" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="例如 5821" /></div><button class="number-btn" type="submit">锁定数字</button></form>`}
+        ${submitted ? `<div class="number-digital">${[...own.secret].map((digit) => `<span>${esc(digit)}</span>`).join('')}</div><p class="number-ready" style="margin-top:12px">已设置，等待其他人…</p>` : `<form data-form="secret"><div class="number-field"><label>4 位数字</label><input class="number-input" name="secret" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="例如 5821" value="${esc(state.viewer.draft || '')}" /></div><button class="number-btn" type="submit">锁定数字</button><p class="number-muted" style="margin:8px 0 0">自动保存草稿；超时未提交会随机补全后提交。</p></form>`}
       </div>
     </div>
     <div class="number-panel">
@@ -275,14 +277,14 @@ function guessingTemplate() {
   const own = state.players.find((player) => player.isYou);
   const target = state.players.find((player) => player.id === state.viewer.targetId);
   const submitted = own?.submitted;
-  return `<section class="number-grid-2">
-    <div class="number-panel">
+  return `<section class="number-grid-2 number-play-layout">
+    <div class="number-panel number-panel-primary">
       ${roomHeaderTemplate('GUESS / 顺时针猜下家', `ROUND ${state.round}`)}
       <div class="number-panel-body">
         <div class="number-timer" data-number-timer>${remainingSeconds() ?? '--'}s</div>
         <p class="number-muted">你的数字：<b style="color:var(--n-green)">${esc(own?.secret || '****')}</b></p>
         <p class="number-muted" style="margin-top:6px">本轮目标：<b style="color:var(--n-cyan)">${esc(target?.name || '等待')}</b> · 不用选，按座位顺时针</p>
-        ${submitted ? `<p class="number-ready" style="margin-top:10px">这一轮已提交，等待结果…</p>` : `<form data-form="guess"><div class="number-field"><label>输入你对 ${esc(target?.name || '下家')} 的猜测</label><input class="number-input" name="guess" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4 位数字" /></div><button class="number-btn" type="submit">提交猜测</button></form>`}
+        ${submitted ? `<p class="number-ready" style="margin-top:10px">这一轮已提交，等待结果…</p>` : `<form data-form="guess"><div class="number-field"><label>输入你对 ${esc(target?.name || '下家')} 的猜测</label><input class="number-input" name="guess" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4 位数字" value="${esc(state.viewer.draft || '')}" /></div><button class="number-btn" type="submit">提交猜测</button><p class="number-muted" style="margin:8px 0 0">草稿自动保存；30 秒到自动提交，不足 4 位随机补全。</p></form>`}
         <div style="height:14px"></div>
         ${historyTemplate(own?.history || [])}
       </div>
@@ -290,6 +292,8 @@ function guessingTemplate() {
     <div class="number-panel">
       ${roomHeaderTemplate('CLOCKWISE / 顺时针', target?.submitted ? '已猜' : '思考中')}
       <div class="number-panel-body">
+        <p class="number-target-label">本轮目标 · 你的下家</p>
+        <div class="number-target-name">${esc(target?.name || '等待')}</div>
         ${seatTemplate(target)}
         <p class="number-muted" style="margin-top:10px">每个人只猜自己的下家，座位顺序就是目标顺序。所有人的数字在结束前不会公开。</p>
         <div class="number-btn-row"><button class="number-btn secondary" data-action="copy-room">复制房间码</button></div>
@@ -395,6 +399,25 @@ function formValues(form) {
   return Object.fromEntries(data.entries());
 }
 
+function scheduleDraft(kind, value) {
+  lastDraft = value;
+  if (draftSaveTimer) clearTimeout(draftSaveTimer);
+  draftSaveTimer = setTimeout(async () => {
+    if (!session || !state || state.viewer.submitted) return;
+    try {
+      await api('/api/number/draft', {
+        code: session.code,
+        playerId: session.playerId,
+        token: session.token,
+        kind,
+        value,
+      });
+    } catch {
+      // Draft sync is best-effort; do not interrupt typing.
+    }
+  }, 900);
+}
+
 async function handleForm(form) {
   const type = form.dataset.form;
   const values = formValues(form);
@@ -467,6 +490,15 @@ app.addEventListener('submit', (event) => {
   handleForm(form);
 });
 
+app.addEventListener('input', (event) => {
+  const input = event.target.closest('.number-input');
+  const form = input?.closest('form[data-form]');
+  if (!input || !form) return;
+  if (form.dataset.form === 'secret' || form.dataset.form === 'guess') {
+    scheduleDraft(form.dataset.form, digits(input.value));
+  }
+});
+
 app.addEventListener('click', (event) => {
   const button = event.target.closest('[data-action]');
   if (button) handleAction(button.dataset.action);
@@ -485,5 +517,14 @@ async function boot() {
   }
   renderLanding();
 }
+
+setInterval(() => {
+  const input = document.querySelector('.number-input:focus');
+  const form = input?.closest('form[data-form]');
+  if (!input || !form) return;
+  if (form.dataset.form === 'secret' || form.dataset.form === 'guess') {
+    scheduleDraft(form.dataset.form, digits(input.value));
+  }
+}, 3000);
 
 boot();
