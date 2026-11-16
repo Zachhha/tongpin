@@ -547,3 +547,87 @@
     font-size: 32px;
   }
 }
+
+.number-entry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-content: start;
+}
+
+.number-entry-card .number-panel-body {
+  padding: 13px;
+}
+
+.number-entry-card .number-input {
+  min-height: 40px;
+  font-size: 14px;
+}
+
+.number-example {
+  margin-top: 12px;
+  padding: 9px 10px;
+  border-left: 3px solid var(--n-cyan);
+  background: #0b1221;
+  color: var(--n-muted);
+  font-family: "Courier New", monospace;
+  font-size: 9px;
+  line-height: 1.8;
+}
+
+.number-example b {
+  color: var(--n-cyan);
+}
+
+.number-setter-log {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--n-line);
+}
+
+.number-setter-log > b {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--n-cyan);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+}
+
+.number-secret-display {
+  color: var(--n-cyan) !important;
+  letter-spacing: 0.18em !important;
+}
+
+@media (max-width: 760px) {
+  .number-entry-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.number-field-hint {
+  color: var(--n-muted);
+  font-family: "Courier New", monospace;
+  font-size: 8px;
+  line-height: 1.6;
+}
+
+.number-role-note {
+  margin-top: 11px;
+  padding: 9px 10px;
+  border-left: 3px solid var(--n-cyan);
+  background: #0b1221;
+  color: var(--n-muted);
+  font-family: "Courier New", monospace;
+  font-size: 9px;
+  line-height: 1.7;
+}
+
+.number-role-note b {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--n-cyan);
+}
+
+.number-role-note span {
+  display: block;
+}
