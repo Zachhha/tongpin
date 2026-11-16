@@ -589,3 +589,243 @@
   .dragon-cell { border-radius: 3px; }
   .dragon-tools { justify-content: flex-start; }
 }
+
+/* 奶龙形象：黄色蛋形身体 + 绿色眼睛 + 小脚 */
+.dragon-cell .nailong {
+  width: 64%;
+  height: 78%;
+  border: 1.4px solid #7a5a1c;
+  border-radius: 48% 48% 43% 43%;
+  background: #f6c945;
+  box-shadow: inset -3px -4px 0 rgba(196, 139, 12, 0.22);
+}
+
+.dragon-cell .nailong .eye {
+  top: 28%;
+  width: 11%;
+  height: 14%;
+  border-radius: 50%;
+  background: #3f8f5a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.dragon-cell .nailong .eye.left { left: 28%; }
+.dragon-cell .nailong .eye.right { right: 28%; }
+
+.dragon-cell .nailong .mouth {
+  bottom: 23%;
+  left: 44%;
+  width: 12%;
+  height: 5%;
+  border-radius: 50%;
+  background: #a9772f;
+}
+
+.dragon-cell .nailong .foot {
+  bottom: -10%;
+  width: 24%;
+  height: 15%;
+  border: 1.4px solid #7a5a1c;
+  border-radius: 50%;
+  background: #f6c945;
+  z-index: 0;
+}
+
+.dragon-cell .nailong .foot.left { left: 13%; }
+.dragon-cell .nailong .foot.right { right: 13%; }
+
+.dragon-cell .cross {
+  color: rgba(61, 44, 18, 0.62);
+  font-family: var(--mono);
+  font-size: clamp(20px, 4.5vw, 36px);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.dragon-board.x-mode {
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.dragon-board.x-mode .dragon-cell {
+  cursor: crosshair;
+}
+
+.dragon-board.x-mode .dragon-cell:hover {
+  filter: brightness(0.9);
+}
+
+/* 参考棋盘：浅色底板、大圆角格子、坐标和剩余数量 */
+.dragon-board-wrap {
+  width: min(100%, 780px);
+  margin: 0 auto;
+}
+
+.dragon-hud {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: fit-content;
+  min-width: 190px;
+  margin: 0 auto 11px;
+  padding: 6px 15px;
+  border: 1px solid #e8e2d6;
+  border-radius: 999px;
+  background: #fff;
+  color: #6f675a;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(61, 44, 18, 0.08);
+}
+
+.dragon-hud b {
+  color: #e2553e;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.dragon-hud-mode {
+  margin-left: 2px;
+  padding-left: 8px;
+  border-left: 1px solid #e8e2d6;
+  color: #a29a8c;
+  font-family: var(--mono);
+  font-size: 8px;
+}
+
+.dragon-hud-face {
+  position: relative;
+  width: 25px;
+  height: 21px;
+  border: 1.3px solid #7a5a1c;
+  border-radius: 50% 50% 45% 45%;
+  background: #f6c945;
+}
+
+.dragon-hud-face::before,
+.dragon-hud-face::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  width: 3px;
+  height: 4px;
+  border-radius: 50%;
+  background: #3f8f5a;
+}
+
+.dragon-hud-face::before { left: 6px; }
+.dragon-hud-face::after { right: 6px; }
+
+.dragon-board-frame {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-rows: auto 20px;
+  gap: 4px;
+  width: 100%;
+}
+
+.dragon-row-labels {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  grid-template-rows: repeat(var(--n), 1fr);
+  gap: 4px;
+  align-items: center;
+  color: #a39a89;
+  font-family: var(--mono);
+  font-size: 9px;
+  text-align: right;
+}
+
+.dragon-col-labels {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  gap: 4px;
+  color: #a39a89;
+  font-family: var(--mono);
+  font-size: 9px;
+  text-align: center;
+}
+
+.dragon-board {
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  padding: 7px;
+  border: 1.5px solid #e3ddd1;
+  border-radius: 16px;
+  background: #f1efe9;
+  box-shadow: 0 8px 24px rgba(61, 44, 18, 0.1);
+  gap: 4px;
+}
+
+.dragon-cell {
+  border-radius: 9px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+.dragon-cell:hover {
+  filter: brightness(0.97);
+  transform: scale(0.97);
+}
+
+.dragon-cell .cross {
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(61, 44, 18, 0.32);
+  font-size: clamp(22px, 4.8vw, 40px);
+}
+
+.dragon-board.x-mode {
+  background: #eeece6;
+}
+
+@media (max-width: 760px) {
+  .dragon-board-frame {
+    grid-template-columns: 17px minmax(0, 1fr);
+    grid-template-rows: auto 16px;
+    gap: 3px;
+  }
+
+  .dragon-board {
+    padding: 5px;
+    gap: 2.5px;
+    border-radius: 12px;
+  }
+
+  .dragon-cell {
+    border-radius: 6px;
+  }
+
+  .dragon-row-labels,
+  .dragon-col-labels {
+    gap: 2.5px;
+    font-size: 7px;
+  }
+
+  .dragon-hud {
+    min-width: 0;
+    padding: 5px 11px;
+    font-size: 10px;
+  }
+}
+
+/* 直接使用用户提供的奶龙图片（已抠成透明 PNG） */
+.dragon-cell .nailong-img {
+  display: block;
+  width: 86%;
+  height: 86%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 0 rgba(61, 44, 18, 0.18));
+}
+
+.dragon-hud-img {
+  display: block;
+  width: 30px;
+  height: 27px;
+  object-fit: contain;
+  pointer-events: none;
+}

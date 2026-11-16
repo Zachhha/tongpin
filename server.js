@@ -65,6 +65,7 @@ const STATIC_FILES = new Map([
   ['/dragon.html', ['dragon.html', 'text/html; charset=utf-8']],
   ['/dragon.css', ['dragon.css', 'text/css; charset=utf-8']],
   ['/dragon.js', ['dragon.js', 'text/javascript; charset=utf-8']],
+  ['/nailong.png', ['nailong.png', 'image/png']],
   ['/terms', ['terms.html', 'text/html; charset=utf-8']],
   ['/terms/', ['terms.html', 'text/html; charset=utf-8']],
   ['/terms.html', ['terms.html', 'text/html; charset=utf-8']],
@@ -1313,6 +1314,14 @@ function createApp(options = {}) {
     if (req.method === 'POST' && url.pathname === '/api/dragon/tap') {
       await handleAction(req, res, async (body) => {
         const { room } = dragon.tap(body.code, body.playerId, body.token, body.index, body.value);
+        return { ok: true, state: dragon.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/dragon/paint') {
+      await handleAction(req, res, async (body) => {
+        const { room } = dragon.paint(body.code, body.playerId, body.token, body.indexes, body.value || 'x');
         return { ok: true, state: dragon.view(room, body.playerId) };
       });
       return;

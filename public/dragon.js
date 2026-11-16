@@ -12,6 +12,8 @@ let hintCell = null;
 let hintText = '';
 let lastInvalid = false;
 let errorMessage = '';
+let drag = null;
+let suppressClick = false;
 
 const REGION_COLORS = [
   '#ffe08a', '#bde7a4', '#ffc0b2', '#b9ddf3', '#e8c8f2', '#f6d2a0',
@@ -201,20 +203,31 @@ function lobbyTemplate() {
 function boardTemplate() {
   const size = state.size;
   const board = state.board || {};
+  const own = state.players.find((player) => player.isYou);
+  const remaining = Math.max(0, size - (own?.count || 0));
   const cells = Array.from({ length: size * size }, (_, index) => {
     const region = state.regions?.[index] ?? 0;
     const value = board[index] || board[String(index)] || '';
     const color = REGION_COLORS[region % REGION_COLORS.length];
     let content = '';
     if (value === 'dragon') {
-      content = '<span class="nailong"><i class="horn left"></i><i class="horn right"></i><i class="eye left"></i><i class="eye right"></i><i class="cheek left"></i><i class="cheek right"></i><i class="snout"></i></span>';
+      content = '<img class="nailong-img" src="/nailong.png" alt="" draggable="false" />';
     } else if (value === 'x') {
       content = '<span class="cross">×</span>';
     }
     return `<button type="button" class="dragon-cell ${hintCell === index ? 'hinted' : ''}" data-cell="${index}" style="--cell:${color}" aria-label="第 ${Math.floor(index / size) + 1} 行第 ${index % size + 1} 列">${content}</button>`;
   }).join('');
   return `<div class="dragon-board-wrap">
-    <div class="dragon-board" style="--n:${size}">${cells}</div>
+    <div class="dragon-hud">
+      <img class="dragon-hud-img" src="/nailong.png" alt="" draggable="false" />
+      <span>剩余奶龙：<b>${remaining}</b></span>
+      <span class="dragon-hud-mode">${state.mode === 'coop' ? '合作' : '竞速'}</span>
+    </div>
+    <div class="dragon-board-frame" style="--n:${size}">
+      <div class="dragon-row-labels">${Array.from({ length: size }, (_, i) => `<span>${size - i}</span>`).join('')}</div>
+      <div class="dragon-board ${tool === 'x' ? 'x-mode' : ''}" style="--n:${size}">${cells}</div>
+      <div class="dragon-col-labels">${Array.from({ length: size }, (_, i) => `<span>${i + 1}</span>`).join('')}</div>
+    </div>
     <div class="dragon-tools">
       <button type="button" class="dragon-tool ${tool === 'dragon' ? 'active' : ''}" data-tool="dragon">放奶龙</button>
       <button type="button" class="dragon-tool ${tool === 'x' ? 'active' : ''}" data-tool="x">打叉排除</button>
@@ -373,7 +386,15 @@ async function handleAction(action) {
   }
 }
 
+function markXLocal(index) {
+  const cell = document.querySelector(`[data-cell="${index}"]`);
+  if (!cell) return;
+  cell.innerHTML = '<span class="cross">×</span>';
+  if (state?.board) state.board[index] = 'x';
+}
+
 async function handleCell(index) {
+  if (suppressClick) return;
   if (!state || state.viewer.isSpectator || state.phase !== 'playing') return;
   const current = state.board[index] || state.board[String(index)] || 'empty';
   const value = current === tool ? 'empty' : tool;
@@ -384,6 +405,70 @@ async function handleCell(index) {
     renderState();
   } catch (error) {
     toast(error.message);
+  }
+}
+
+function startDrag(event) {
+  if (tool !== 'x' || !state || state.viewer.isSpectator || state.phase !== 'playing') return;
+  const cell = event.target.closest('[data-cell]');
+  if (!cell) return;
+  const index = Number(cell.dataset.cell);
+  const value = state.board[index] || state.board[String(index)] || 'empty';
+  if (value === 'dragon') return;
+  event.preventDefault();
+  drag = { indexes: new Set(), seen: new Set(), removeIndex: value === 'x' ? index : null };
+  if (value !== 'x') {
+    drag.indexes.add(index);
+    markXLocal(index);
+  }
+  drag.seen.add(index);
+}
+
+function moveDrag(event) {
+  if (!drag) return;
+  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.('[data-cell]');
+  if (!target) return;
+  const index = Number(target.dataset.cell);
+  if (drag.seen.has(index)) return;
+  drag.seen.add(index);
+  const value = state.board[index] || state.board[String(index)] || 'empty';
+  if (value === 'dragon' || value === 'x') return;
+  drag.indexes.add(index);
+  markXLocal(index);
+  event.preventDefault();
+}
+
+async function endDrag() {
+  if (!drag) return;
+  const indexes = [...drag.indexes];
+  const removeIndex = drag.removeIndex;
+  drag = null;
+  suppressClick = true;
+  setTimeout(() => { suppressClick = false; }, 350);
+  try {
+    if (!indexes.length && removeIndex != null) {
+      const data = await api('/api/dragon/tap', {
+        code: session.code, playerId: session.playerId, token: session.token, index: removeIndex, value: 'empty',
+      });
+      state = data.state;
+      hintCell = null;
+      renderState();
+      return;
+    }
+    if (!indexes.length) return;
+    const data = await api('/api/dragon/paint', {
+      code: session.code,
+      playerId: session.playerId,
+      token: session.token,
+      indexes,
+      value: 'x',
+    });
+    state = data.state;
+    hintCell = null;
+    renderState();
+  } catch (error) {
+    toast(error.message);
+    renderState();
   }
 }
 
@@ -452,7 +537,13 @@ app.addEventListener('change', async (event) => {
   }
 });
 
+app.addEventListener('pointerdown', startDrag);
+document.addEventListener('pointermove', moveDrag, { passive: false });
+document.addEventListener('pointerup', endDrag);
+document.addEventListener('pointercancel', endDrag);
+
 app.addEventListener('click', (event) => {
+  if (suppressClick) return;
   const toolButton = event.target.closest('[data-tool]');
   if (toolButton) {
     tool = toolButton.dataset.tool;
