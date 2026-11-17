@@ -1,4 +1,4 @@
-.dragon-body {
+﻿.dragon-body {
   --d-bg: #fff7dd;
   --d-paper: #fffdf4;
   --d-panel: #fffaf0;
@@ -590,7 +590,7 @@
   .dragon-tools { justify-content: flex-start; }
 }
 
-/* 奶龙形象：黄色蛋形身体 + 绿色眼睛 + 小脚 */
+/* 濂堕緳褰㈣薄锛氶粍鑹茶泲褰㈣韩浣?+ 缁胯壊鐪肩潧 + 灏忚剼 */
 .dragon-cell .nailong {
   width: 64%;
   height: 78%;
@@ -655,7 +655,7 @@
   filter: brightness(0.9);
 }
 
-/* 参考棋盘：浅色底板、大圆角格子、坐标和剩余数量 */
+/* 鍙傝€冩鐩橈細娴呰壊搴曟澘銆佸ぇ鍦嗚鏍煎瓙銆佸潗鏍囧拰鍓╀綑鏁伴噺 */
 .dragon-board-wrap {
   width: min(100%, 780px);
   margin: 0 auto;
@@ -812,7 +812,7 @@
   }
 }
 
-/* 直接使用用户提供的奶龙图片（已抠成透明 PNG） */
+/* 鐩存帴浣跨敤鐢ㄦ埛鎻愪緵鐨勫ザ榫欏浘鐗囷紙宸叉姞鎴愰€忔槑 PNG锛?*/
 .dragon-cell .nailong-img {
   display: block;
   width: 86%;
@@ -857,3 +857,154 @@
 .dragon-answer-wrap .dragon-board {
   width: 100%;
 }
+
+.dragon-option-group {
+  margin: 10px 0 12px;
+}
+
+.dragon-option-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--d-muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.dragon-option-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.dragon-option {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--d-line);
+  border-radius: 10px;
+  background: #fffdf8;
+  color: var(--d-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.14s, background 0.14s, transform 0.14s;
+}
+
+.dragon-option:hover {
+  border-color: var(--d-yellow-deep);
+  background: #fff8dc;
+}
+
+.dragon-option.active {
+  border-color: var(--d-ink);
+  background: var(--d-yellow);
+  box-shadow: 2px 2px 0 var(--d-ink);
+}
+
+.dragon-option b {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.dragon-option span {
+  color: var(--d-muted);
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.dragon-option.active span {
+  color: rgba(61, 44, 18, 0.68);
+}
+
+.dragon-size-option {
+  min-width: 58px;
+  padding: 8px 9px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.dragon-size-list {
+  gap: 4px;
+}
+
+.dragon-campaign-option {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 5px;
+  border-style: dashed;
+}
+
+.dragon-campaign-option.active {
+  border-style: solid;
+}
+
+.dragon-campaign-option span {
+  color: var(--d-muted);
+  font-family: var(--mono);
+  font-size: 7px;
+}
+
+.dragon-campaign-option.active span {
+  color: rgba(61, 44, 18, 0.68);
+}
+
+.nailong-img.hypo-img {
+  filter: hue-rotate(210deg) saturate(1.55) brightness(0.9) drop-shadow(0 1px 0 rgba(61, 44, 18, 0.18));
+}
+
+.dragon-hypo-tool.active {
+  border-color: #7a4bb5;
+  background: #b88cff;
+  color: #2d174c;
+  box-shadow: 2px 2px 0 #4b2a75;
+}
+
+.dragon-action-tools {
+  margin-top: 5px;
+}
+
+.dragon-tool:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.dragon-log {
+  width: 100%;
+  max-height: 128px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--d-line);
+  border-radius: 10px;
+  background: #fffdf8;
+  color: var(--d-muted);
+  font-size: 9px;
+  line-height: 1.65;
+  text-align: left;
+}
+
+.dragon-log > span {
+  display: block;
+  margin-bottom: 4px;
+  color: #a39a89;
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 0.08em;
+}
+
+.dragon-log p {
+  margin: 2px 0;
+}
+
+.dragon-log b {
+  margin-right: 4px;
+  color: #8b6a2f;
+}
+
+.dragon-log-empty {
+  color: #b8ae9c;
+}
+

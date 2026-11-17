@@ -1335,6 +1335,38 @@ function createApp(options = {}) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/dragon/toggle-auto') {
+      await handleAction(req, res, async (body) => {
+        const { room } = dragon.toggleAuto(body.code, body.playerId, body.token, body.enabled);
+        return { ok: true, state: dragon.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/dragon/undo') {
+      await handleAction(req, res, async (body) => {
+        const { room } = dragon.undo(body.code, body.playerId, body.token);
+        return { ok: true, state: dragon.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/dragon/undo-hypo') {
+      await handleAction(req, res, async (body) => {
+        const { room } = dragon.undoHypothetical(body.code, body.playerId, body.token);
+        return { ok: true, state: dragon.view(room, body.playerId) };
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/dragon/clear-x') {
+      await handleAction(req, res, async (body) => {
+        const { room } = dragon.clearExclusions(body.code, body.playerId, body.token);
+        return { ok: true, state: dragon.view(room, body.playerId) };
+      });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/dragon/reveal') {
       await handleAction(req, res, async (body) => {
         const { room } = dragon.reveal(body.code, body.playerId, body.token);

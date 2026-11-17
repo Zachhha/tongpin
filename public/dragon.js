@@ -175,10 +175,20 @@ function lobbyTemplate() {
       <div class="dragon-panel-body">
         <div class="dragon-room-code">${esc(state.code)}<small>房间码</small></div>
         <div>${seats.map(seatTemplate).join('')}</div>
-        ${isHost ? `<div class="dragon-settings">
-          <div class="dragon-field"><label>玩法</label><select class="dragon-select" data-setting="mode"><option value="race" ${state.mode === 'race' ? 'selected' : ''}>竞速 · 各解各的</option><option value="coop" ${state.mode === 'coop' ? 'selected' : ''}>合作 · 共用棋盘</option></select></div>
-          <div class="dragon-field"><label>棋盘</label><select class="dragon-select" data-setting="size">${state.sizes.map((size) => `<option value="${size}" ${size === state.size ? 'selected' : ''}>${size}×${size}</option>`).join('')}</select></div>
-        </div>` : `<p class="dragon-hint">玩法：${state.mode === 'race' ? '竞速' : '合作'} · 棋盘 ${state.size}×${state.size}</p>`}
+        ${isHost ? `<div class="dragon-option-group">
+          <span class="dragon-option-label">玩法</span>
+          <div class="dragon-option-list">
+            <button type="button" class="dragon-option ${state.mode === 'race' ? 'active' : ''}" data-mode-option="race"><b>竞速</b><span>每人一块相同棋盘，先完成者赢</span></button>
+            <button type="button" class="dragon-option ${state.mode === 'coop' ? 'active' : ''}" data-mode-option="coop"><b>合作</b><span>所有人共用一块棋盘，一起完成</span></button>
+          </div>
+        </div>
+        <div class="dragon-option-group">
+          <span class="dragon-option-label">棋盘大小</span>
+          <div class="dragon-option-list dragon-size-list">
+            ${state.sizes.map((size) => `<button type="button" class="dragon-option dragon-size-option ${!state.campaign && size === state.size ? 'active' : ''}" data-size-option="${size}">${size}×${size}</button>`).join('')}
+            <button type="button" class="dragon-option dragon-size-option dragon-campaign-option ${state.campaign ? 'active' : ''}" data-size-option="campaign">闯关 <span>5→12</span></button>
+          </div>
+        </div>` : `<p class="dragon-hint">玩法：${state.campaign ? '闯关' : state.mode === 'race' ? '竞速' : '合作'} · 棋盘 ${state.size}×${state.size}</p>`}
         <div class="dragon-btn-row">
           ${state.canStart ? '<button class="dragon-btn" data-action="start">开始找奶龙</button>' : ''}
           <button class="dragon-btn secondary" data-action="copy-links">复制双链接</button>
@@ -194,6 +204,7 @@ function lobbyTemplate() {
         <p>2. 每一列只能有一只奶龙。</p>
         <p>3. 每一个同色区域只能有一只奶龙。</p>
         <p>4. 两只奶龙八个方向都不能相邻。</p>
+        <p>5. 闯关模式 = 合作连续过关，从 5×5 自动升到 12×12。</p>
         <p>点格子放奶龙，再点一次取消；切到「打叉」可以标记排除格。</p>
       </div>
     </div>
@@ -216,6 +227,8 @@ function boardTemplate() {
       content = '<span class="cross">×</span>';
     } else if (value === 'dragon') {
       content = '<img class="nailong-img" src="/nailong.png" alt="" draggable="false" />';
+    } else if (value === 'hypo') {
+      content = '<img class="nailong-img hypo-img" src="/nailong.png" alt="" draggable="false" />';
     }
     return `<button type="button" class="dragon-cell ${given ? 'given' : ''} ${hintCell === index ? 'hinted' : ''}" data-cell="${index}" ${given ? 'data-blocked="1"' : ''} style="--cell:${color}" aria-label="第 ${Math.floor(index / size) + 1} 行第 ${index % size + 1} 列">${content}</button>`;
   }).join('');
@@ -223,7 +236,7 @@ function boardTemplate() {
     <div class="dragon-hud">
       <img class="dragon-hud-img" src="/nailong.png" alt="" draggable="false" />
       <span>剩余奶龙：<b>${remaining}</b></span>
-      <span class="dragon-hud-mode">${state.mode === 'coop' ? '合作' : '竞速'}</span>
+      <span class="dragon-hud-mode">${state.campaign ? `闯关 ${Number(state.campaignIndex) + 1}/${state.campaignTotal} · ${size}×${size}` : state.mode === 'coop' ? '合作' : '竞速'}</span>
     </div>
     <div class="dragon-board-frame" style="--n:${size}">
       <div class="dragon-row-labels">${Array.from({ length: size }, (_, i) => `<span>${size - i}</span>`).join('')}</div>
@@ -232,10 +245,18 @@ function boardTemplate() {
     </div>
     <div class="dragon-tools">
       <button type="button" class="dragon-tool ${tool === 'dragon' ? 'active' : ''}" data-tool="dragon">放奶龙</button>
+      <button type="button" class="dragon-tool dragon-hypo-tool ${tool === 'hypo' ? 'active' : ''}" data-tool="hypo">假设奶龙</button>
       <button type="button" class="dragon-tool ${tool === 'x' ? 'active' : ''}" data-tool="x">打叉排除</button>
       <button type="button" class="dragon-btn secondary" data-action="hint" ${state.hintLimit && state.hintsUsed >= state.hintLimit ? 'disabled' : ''}>${state.hintLimit ? `提示 ${state.hintsUsed}/${state.hintLimit}` : '提示 ∞'}</button>
     </div>
+    <div class="dragon-tools dragon-action-tools">
+      <button type="button" class="dragon-tool" data-action="undo" ${state.canUndo ? '' : 'disabled'}>撤回上个奶龙</button>
+      <button type="button" class="dragon-tool" data-action="undo-hypo" ${state.canUndoHypo ? '' : 'disabled'}>撤回所有假设</button>
+      <button type="button" class="dragon-tool" data-action="clear-x">清空排除</button>
+      <button type="button" class="dragon-tool ${state.autoExclude ? 'active' : ''}" data-action="toggle-auto">自动排除：${state.autoExclude ? '开' : '关'}</button>
+    </div>
     <p class="dragon-note">${hintText || '每行、每列、每个色块各一只，八方向不相邻。'}</p>
+    <div class="dragon-log"><span>操作记录</span>${state.log?.length ? state.log.slice().reverse().map((entry) => `<p><b>${esc(entry.name)}</b>${esc(entry.text)}</p>`).join('') : '<p class="dragon-log-empty">暂无操作</p>'}</div>
   </div>`;
 }
 
@@ -244,10 +265,10 @@ function gameTemplate() {
   const count = own?.count || 0;
   return `<div class="dragon-two-col">
     <div class="dragon-panel">
-      ${panelHead(state.mode === 'coop' ? 'CO-OP / 合作找奶龙' : 'RACE / 竞速找奶龙', `${state.size}×${state.size}`)}
+      ${panelHead(state.campaign ? 'CAMPAIGN / 闯关找奶龙' : state.mode === 'coop' ? 'CO-OP / 合作找奶龙' : 'RACE / 竞速找奶龙', state.campaign ? `第 ${Number(state.campaignIndex) + 1}/${state.campaignTotal} 关 · ${state.size}×${state.size}` : `${state.size}×${state.size}`)}
       <div class="dragon-panel-body">
         <div class="dragon-status">
-          <span class="dragon-pill">${state.mode === 'coop' ? '共用棋盘' : '各自棋盘'}</span>
+          <span class="dragon-pill">${state.campaign ? '合作闯关' : state.mode === 'coop' ? '共用棋盘' : '各自棋盘'}</span>
           <span class="dragon-pill">奶龙 ${count}/${state.size}</span>
           <span class="dragon-pill">提示 ${state.hintLimit ? `${state.hintsUsed}/${state.hintLimit}` : `${state.hintsUsed} 次`}</span>
         </div>
@@ -289,16 +310,20 @@ function finishedTemplate() {
   const revealed = state.revealed;
   const title = revealed
     ? '答案已公布'
-    : state.mode === 'coop'
-      ? '奶龙全部找到了'
-      : `${esc(winner?.name || '有人')} 先找到`;
+    : state.campaign
+      ? '闯关完成'
+      : state.mode === 'coop'
+        ? '奶龙全部找到了'
+        : `${esc(winner?.name || '有人')} 先找到`;
   const note = revealed
     ? '本局已结束，绿色奶龙就是唯一答案。'
-    : state.mode === 'coop'
-      ? '合作模式完成，大家一起通关。'
-      : '先正确放完所有奶龙的人获胜。';
+    : state.campaign
+      ? '从 5×5 一路通关到 12×12，合作闯关完成。'
+      : state.mode === 'coop'
+        ? '合作模式完成，大家一起通关。'
+        : '先正确放完所有奶龙的人获胜。';
   return `<div class="dragon-finish">
-    <p class="dragon-kicker">${revealed ? 'ANSWER REVEALED' : state.mode === 'coop' ? 'CO-OP CLEAR' : 'RACE OVER'}</p>
+    <p class="dragon-kicker">${revealed ? 'ANSWER REVEALED' : state.campaign ? 'CAMPAIGN CLEAR' : state.mode === 'coop' ? 'CO-OP CLEAR' : 'RACE OVER'}</p>
     <h2>${title}</h2>
     <p>${note}</p>
     ${answerBoardTemplate()}
@@ -354,9 +379,11 @@ function resultText() {
   const winner = state.players.find((player) => player.id === state.winnerId);
   const result = state.revealed
     ? '答案已公布'
-    : state.mode === 'coop'
-      ? '合作通关'
-      : `${winner?.name || '有人'} 获胜`;
+    : state.campaign
+      ? '闯关完成'
+      : state.mode === 'coop'
+        ? '合作通关'
+        : `${winner?.name || '有人'} 获胜`;
   return [
     '🐉 同频找奶龙',
     `房间：${state.code}`,
@@ -409,6 +436,27 @@ async function handleAction(action) {
       await copyText(resultText());
     } else if (action === 'export-result') {
       downloadResult();
+    } else if (action === 'undo') {
+      const data = await api('/api/dragon/undo', { code: session.code, playerId: session.playerId, token: session.token });
+      state = data.state;
+      renderState();
+    } else if (action === 'undo-hypo') {
+      const data = await api('/api/dragon/undo-hypo', { code: session.code, playerId: session.playerId, token: session.token });
+      state = data.state;
+      renderState();
+    } else if (action === 'clear-x') {
+      const data = await api('/api/dragon/clear-x', { code: session.code, playerId: session.playerId, token: session.token });
+      state = data.state;
+      renderState();
+    } else if (action === 'toggle-auto') {
+      const data = await api('/api/dragon/toggle-auto', {
+        code: session.code,
+        playerId: session.playerId,
+        token: session.token,
+        enabled: !state.autoExclude,
+      });
+      state = data.state;
+      renderState();
     } else if (action === 'reveal') {
       if (!window.confirm('公布答案会结束本局，确定吗？')) return;
       const data = await api('/api/dragon/reveal', { code: session.code, playerId: session.playerId, token: session.token });
@@ -447,6 +495,7 @@ async function handleCell(index) {
   if (!state || state.viewer.isSpectator || state.phase !== 'playing') return;
   if ((state.blocked || []).includes(index)) return;
   const current = state.board[index] || state.board[String(index)] || 'empty';
+  if (tool === 'x' && (current === 'dragon' || current === 'hypo')) return;
   const value = current === tool ? 'empty' : tool;
   try {
     const data = await api('/api/dragon/tap', { code: session.code, playerId: session.playerId, token: session.token, index, value });
@@ -464,7 +513,7 @@ function startDrag(event) {
   if (!cell || cell.dataset.blocked) return;
   const index = Number(cell.dataset.cell);
   const value = state.board[index] || state.board[String(index)] || 'empty';
-  if (value === 'dragon') return;
+  if (value === 'dragon' || value === 'hypo') return;
   event.preventDefault();
   drag = { indexes: new Set(), seen: new Set(), removeIndex: value === 'x' ? index : null };
   if (value !== 'x') {
@@ -483,7 +532,7 @@ function moveDrag(event) {
   if (drag.seen.has(index)) return;
   drag.seen.add(index);
   const value = state.board[index] || state.board[String(index)] || 'empty';
-  if (value === 'dragon' || value === 'x') return;
+  if (value === 'dragon' || value === 'hypo' || value === 'x') return;
   drag.indexes.add(index);
   markXLocal(index);
   event.preventDefault();
@@ -588,6 +637,21 @@ app.addEventListener('change', async (event) => {
   }
 });
 
+async function saveSetting(values) {
+  try {
+    const data = await api('/api/dragon/settings', {
+      code: session.code,
+      playerId: session.playerId,
+      token: session.token,
+      ...values,
+    });
+    state = data.state;
+    renderState();
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
 app.addEventListener('pointerdown', startDrag);
 document.addEventListener('pointermove', moveDrag, { passive: false });
 document.addEventListener('pointerup', endDrag);
@@ -595,6 +659,16 @@ document.addEventListener('pointercancel', endDrag);
 
 app.addEventListener('click', (event) => {
   if (suppressClick) return;
+  const modeButton = event.target.closest('[data-mode-option]');
+  if (modeButton) {
+    saveSetting({ mode: modeButton.dataset.modeOption });
+    return;
+  }
+  const sizeButton = event.target.closest('[data-size-option]');
+  if (sizeButton) {
+    saveSetting({ size: Number(sizeButton.dataset.sizeOption) });
+    return;
+  }
   const toolButton = event.target.closest('[data-tool]');
   if (toolButton) {
     tool = toolButton.dataset.tool;
