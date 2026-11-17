@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const { GameStore, GameError, constants } = require('../lib/game');
 
 function makeRoom(count = 3, name = '房主') {
-  const game = new GameStore({ allowedDurations: [30, 60, 90] });
+  const game = new GameStore({ allowedDurations: [15, 20, 30, 60, 90] });
   const created = game.createRoom(name);
   const room = created.room;
   const players = [created.player];
@@ -211,6 +211,137 @@ test('spectators join without taking a seat and cannot act as players', () => {
   assert.equal(revealView.result.entries.length, 2);
   assert.ok(revealView.players.every((player) => typeof player.word === 'string'));
   errorOf(() => game.continueRound(room.code, spectator.id, spectator.token));
+});
+
+test('20-second mode rejects manual submissions and auto-reveals drafts', () => {
+  const { game, room, players, host } = makeRoom(2);
+  game.setDuration(room.code, host.id, host.token, 20);
+  game.start(room.code, host.id, host.token);
+  assert.equal(room.durationSec, 20);
+
+  game.saveDraft(room.code, players[0].id, players[0].token, '海');
+  game.saveDraft(room.code, players[1].id, players[1].token, '夏天');
+  const rejected = errorOf(() =>
+    game.submit(room.code, players[0].id, players[0].token, '海'),
+  );
+  assert.equal(rejected.status, 409);
+
+  const result = game.reveal(room.code, 'timeout');
+  assert.deepEqual(
+    result.entries.map((entry) => entry.word),
+    ['海', '夏天'],
+  );
+  assert.equal(room.phase, 'reveal');
+});
+
+test('15-second mode is also auto-submit only', () => {
+  const { game, room, players, host } = makeRoom(2);
+  game.setDuration(room.code, host.id, host.token, 15);
+  game.start(room.code, host.id, host.token);
+  assert.equal(room.durationSec, 15);
+
+  game.saveDraft(room.code, players[0].id, players[0].token, '风');
+  const rejected = errorOf(() =>
+    game.submit(room.code, players[0].id, players[0].token, '风'),
+  );
+  assert.equal(rejected.status, 409);
+  const result = game.reveal(room.code, 'timeout');
+  assert.equal(result.entries[0].word, '风');
+});
+
+test('partial word matches are recorded for two or three players', () => {
+  const { game, room, players, host } = makeRoom(3);
+  game.start(room.code, host.id, host.token);
+  game.submit(room.code, players[0].id, players[0].token, '海');
+  game.submit(room.code, players[1].id, players[1].token, '海');
+  game.submit(room.code, players[2].id, players[2].token, '夏天');
+
+  const result = game.view(room, host.id).result;
+  assert.equal(result.allSame, false);
+  assert.equal(result.partialMatches.length, 1);
+  assert.equal(result.partialMatches[0].word, '海');
+  assert.equal(result.partialMatches[0].count, 2);
+  assert.equal(result.wordGroups[0].count, 2);
+
+  const allSame = makeRoom(2);
+  allSame.game.start(allSame.room.code, allSame.host.id, allSame.host.token);
+  allSame.game.submit(allSame.room.code, allSame.players[0].id, allSame.players[0].token, '风');
+  allSame.game.submit(allSame.room.code, allSame.players[1].id, allSame.players[1].token, '风');
+  const won = allSame.game.view(allSame.room, allSame.host.id).result;
+  assert.equal(won.allSame, true);
+  assert.deepEqual(won.partialMatches, []);
+});
+
+test('word likes are one-way, count once per member, and cannot target yourself', () => {
+  const { game, room, players, host } = makeRoom(3);
+  game.start(room.code, host.id, host.token);
+  game.submit(room.code, players[0].id, players[0].token, '海');
+  game.submit(room.code, players[1].id, players[1].token, '风');
+  game.submit(room.code, players[2].id, players[2].token, '云');
+
+  const first = game.likeWord(
+    room.code,
+    players[1].id,
+    players[1].token,
+    1,
+    players[0].id,
+  );
+  assert.equal(first.count, 1);
+  const again = game.likeWord(
+    room.code,
+    players[1].id,
+    players[1].token,
+    1,
+    players[0].id,
+  );
+  assert.equal(again.count, 1);
+  assert.equal(again.alreadyLiked, true);
+
+  const selfLike = errorOf(() =>
+    game.likeWord(room.code, players[0].id, players[0].token, 1, players[0].id),
+  );
+  assert.equal(selfLike.status, 400);
+
+  const { spectator } = game.addSpectator(room.code, '点赞观众');
+  const spectatorLike = game.likeWord(
+    room.code,
+    spectator.id,
+    spectator.token,
+    1,
+    players[0].id,
+    'spectator',
+  );
+  assert.equal(spectatorLike.count, 2);
+
+  const viewer = game.view(room, players[1].id);
+  const likedEntry = viewer.result.entries.find((entry) => entry.playerId === players[0].id);
+  assert.equal(likedEntry.likeCount, 2);
+  assert.equal(likedEntry.liked, true);
+  const ownEntry = viewer.result.entries.find((entry) => entry.playerId === players[1].id);
+  assert.equal(ownEntry.liked, false);
+});
+
+test('only the host can restart the room and keep the same players', () => {
+  const { game, room, players, host } = makeRoom(3);
+  game.start(room.code, host.id, host.token);
+  game.submit(room.code, players[0].id, players[0].token, '海');
+  game.submit(room.code, players[1].id, players[1].token, '风');
+  game.submit(room.code, players[2].id, players[2].token, '云');
+  game.likeWord(room.code, players[1].id, players[1].token, 1, players[0].id);
+
+  const forbidden = errorOf(() =>
+    game.restart(room.code, players[1].id, players[1].token),
+  );
+  assert.equal(forbidden.status, 403);
+
+  game.restart(room.code, host.id, host.token);
+  assert.equal(room.phase, 'lobby');
+  assert.equal(room.round, 0);
+  assert.equal(room.rounds.length, 0);
+  assert.equal(room.players.length, 3);
+  assert.ok(room.players.every((player) => !player.submitted && !player.word));
+  assert.equal(room.wordLikes.size, 0);
+  assert.equal(game.view(room, host.id).history.length, 0);
 });
 
 test('a successful game can be replayed by the same players', () => {

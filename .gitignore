@@ -1,0 +1,6 @@
+.ssh/
+tmp-*
+tmp-tunnel/
+bin/
+shots/
+node_modules/
