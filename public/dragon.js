@@ -18,7 +18,7 @@ let winShown = false;
 let starFrame = null;
 let starParticles = [];
 
-const REGION_PALETTE = Array.from({ length: 24 }, (_, index) => `hsl(${index * 15} 62% 78%)`);
+const REGION_PALETTE = Array.from({ length: 36 }, (_, index) => `hsl(${index * 10} 62% 78%)`);
 
 function regionColorsFor(regions, size) {
   if (!regions || !size) return REGION_PALETTE;
@@ -41,19 +41,22 @@ function regionColorsFor(regions, size) {
   const order = Array.from({ length: count }, (_, i) => i).sort((a, b) => adjacency[b].size - adjacency[a].size);
   const colorIndex = Array(count).fill(-1);
   const circularDistance = (a, b) => {
-    const diff = Math.abs(a - b) * 15;
+    const diff = Math.abs(a - b) * 10;
     return Math.min(diff, 360 - diff);
   };
+  const usedColors = new Set();
   for (const region of order) {
     const neighborColors = [...adjacency[region]].map((id) => colorIndex[id]).filter((id) => id >= 0);
     let best = -1;
     let bestScore = -1;
     for (let candidate = 0; candidate < REGION_PALETTE.length; candidate += 1) {
-      if (neighborColors.includes(candidate)) continue;
+      if (usedColors.has(candidate) || neighborColors.includes(candidate)) continue;
       const score = neighborColors.length ? Math.min(...neighborColors.map((c) => circularDistance(candidate, c))) : 180;
       if (score > bestScore) { bestScore = score; best = candidate; }
     }
-    colorIndex[region] = best >= 0 ? best : 0;
+    if (best < 0) break;
+    colorIndex[region] = best;
+    usedColors.add(best);
   }
   return colorIndex.map((index) => REGION_PALETTE[index]);
 }
