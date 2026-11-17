@@ -666,7 +666,8 @@ app.addEventListener('click', (event) => {
   }
   const sizeButton = event.target.closest('[data-size-option]');
   if (sizeButton) {
-    saveSetting({ size: Number(sizeButton.dataset.sizeOption) });
+    const value = sizeButton.dataset.sizeOption;
+    saveSetting({ size: value === 'campaign' ? 'campaign' : Number(value) });
     return;
   }
   const toolButton = event.target.closest('[data-tool]');
