@@ -1361,6 +1361,14 @@ function createApp(options = {}) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/dragon/clear-dragons') {
+      await handleAction(req, res, async (body) => {
+        const { room } = dragon.clearDragons(body.code, body.playerId, body.token);
+        return { ok: true, state: dragon.view(room, body.playerId) };
+      });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/dragon/clear-x') {
       await handleAction(req, res, async (body) => {
         const { room } = dragon.clearExclusions(body.code, body.playerId, body.token);

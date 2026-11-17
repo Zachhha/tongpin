@@ -18,10 +18,45 @@ let winShown = false;
 let starFrame = null;
 let starParticles = [];
 
-const REGION_COLORS = [
-  '#ffe08a', '#bde7a4', '#ffc0b2', '#b9ddf3', '#e8c8f2', '#f6d2a0',
-  '#c7e8d8', '#ffd6e0', '#d9dcf5', '#e9e2a3', '#c8e9e2', '#f3c7a8',
-];
+const REGION_PALETTE = Array.from({ length: 24 }, (_, index) => `hsl(${index * 15} 62% 78%)`);
+
+function regionColorsFor(regions, size) {
+  if (!regions || !size) return REGION_PALETTE;
+  const count = Math.max(...regions) + 1;
+  const adjacency = Array.from({ length: count }, () => new Set());
+  for (let row = 0; row < size; row += 1) {
+    for (let col = 0; col < size; col += 1) {
+      const index = row * size + col;
+      const region = regions[index];
+      if (col + 1 < size) {
+        const right = regions[index + 1];
+        if (right !== region) { adjacency[region].add(right); adjacency[right].add(region); }
+      }
+      if (row + 1 < size) {
+        const down = regions[index + size];
+        if (down !== region) { adjacency[region].add(down); adjacency[down].add(region); }
+      }
+    }
+  }
+  const order = Array.from({ length: count }, (_, i) => i).sort((a, b) => adjacency[b].size - adjacency[a].size);
+  const colorIndex = Array(count).fill(-1);
+  const circularDistance = (a, b) => {
+    const diff = Math.abs(a - b) * 15;
+    return Math.min(diff, 360 - diff);
+  };
+  for (const region of order) {
+    const neighborColors = [...adjacency[region]].map((id) => colorIndex[id]).filter((id) => id >= 0);
+    let best = -1;
+    let bestScore = -1;
+    for (let candidate = 0; candidate < REGION_PALETTE.length; candidate += 1) {
+      if (neighborColors.includes(candidate)) continue;
+      const score = neighborColors.length ? Math.min(...neighborColors.map((c) => circularDistance(candidate, c))) : 180;
+      if (score > bestScore) { bestScore = score; best = candidate; }
+    }
+    colorIndex[region] = best >= 0 ? best : 0;
+  }
+  return colorIndex.map((index) => REGION_PALETTE[index]);
+}
 
 function readSession() {
   try {
@@ -123,7 +158,7 @@ function landingTemplate() {
         <span class="dragon-chip">八方向不相邻</span>
       </div>
       ${errorMessage ? `<p class="dragon-hint" style="color:#b2372c">${esc(errorMessage)}</p>` : ''}
-      <p class="dragon-preview-entry"><a href="/dragon?preview=win">预览 14×14 通关结算 →</a></p>
+      <p class="dragon-preview-entry"><a href="/dragon?preview=win">预览 13×13 通关结算 →</a></p>
       <div class="dragon-role-note"><b>两种玩法</b>竞速：每人一块相同棋盘，先完成者赢。合作：共用一块棋盘，一起完成。一个人也可以直接开始。</div>
     </div>
     <div class="dragon-entry-grid">
@@ -190,7 +225,7 @@ function lobbyTemplate() {
           <span class="dragon-option-label">棋盘大小</span>
           <div class="dragon-option-list dragon-size-list">
             ${state.sizes.map((size) => `<button type="button" class="dragon-option dragon-size-option ${!state.campaign && size === state.size ? 'active' : ''}" data-size-option="${size}">${size}×${size}</button>`).join('')}
-            <button type="button" class="dragon-option dragon-size-option dragon-campaign-option ${state.campaign ? 'active' : ''}" data-size-option="campaign">闯关 <span>5→14</span></button>
+            <button type="button" class="dragon-option dragon-size-option dragon-campaign-option ${state.campaign ? 'active' : ''}" data-size-option="campaign">闯关 <span>5→13</span></button>
           </div>
           <div class="dragon-custom-size">
             <label for="dragon-custom-size-input">自定义边长</label>
@@ -226,10 +261,11 @@ function boardTemplate() {
   const own = state.players.find((player) => player.isYou);
   const remaining = Math.max(0, size - (own?.count || 0));
   const blocked = new Set(state.blocked || []);
+  const regionColors = regionColorsFor(state.regions, size);
   const cells = Array.from({ length: size * size }, (_, index) => {
     const region = state.regions?.[index] ?? 0;
     const value = board[index] || board[String(index)] || '';
-    const color = REGION_COLORS[region % REGION_COLORS.length];
+    const color = regionColors[region] || REGION_PALETTE[0];
     const given = blocked.has(index);
     let content = '';
     if (given || value === 'x') {
@@ -245,6 +281,7 @@ function boardTemplate() {
     <div class="dragon-hud">
       <img class="dragon-hud-img" src="/nailong.png" alt="" draggable="false" />
       <span>剩余奶龙：<b>${remaining}</b></span>
+      <span class="dragon-hud-mode">假设 ${state.hypoCount || 0}</span>
       <span class="dragon-hud-mode">${state.campaign ? `闯关 ${Number(state.campaignIndex) + 1}/${state.campaignTotal} · ${size}×${size}` : state.mode === 'coop' ? '合作' : '竞速'}</span>
     </div>
     <div class="dragon-board-frame" style="--n:${size}">
@@ -261,6 +298,7 @@ function boardTemplate() {
     <div class="dragon-tools dragon-action-tools">
       <button type="button" class="dragon-tool" data-action="undo" ${state.canUndo ? '' : 'disabled'}>撤回上个奶龙</button>
       <button type="button" class="dragon-tool" data-action="undo-hypo" ${state.canUndoHypo ? '' : 'disabled'}>撤回所有假设</button>
+      <button type="button" class="dragon-tool" data-action="clear-dragons">清空奶龙</button>
       <button type="button" class="dragon-tool" data-action="clear-x">清空排除</button>
       <button type="button" class="dragon-tool ${state.autoExclude ? 'active' : ''}" data-action="toggle-auto">自动排除：${state.autoExclude ? '开' : '关'}</button>
     </div>
@@ -279,6 +317,7 @@ function gameTemplate() {
         <div class="dragon-status">
           <span class="dragon-pill">${state.campaign ? '合作闯关' : state.mode === 'coop' ? '共用棋盘' : '各自棋盘'}</span>
           <span class="dragon-pill">奶龙 ${count}/${state.size}</span>
+          <span class="dragon-pill">假设 ${state.hypoCount || 0}</span>
           <span class="dragon-pill">提示 ${state.hintLimit ? `${state.hintsUsed}/${state.hintLimit}` : `${state.hintsUsed} 次`}</span>
         </div>
         ${boardTemplate()}
@@ -303,9 +342,10 @@ function answerBoardTemplate() {
   const size = state.size;
   const answer = new Set(state.answer || []);
   const blocked = new Set(state.blocked || []);
+  const regionColors = regionColorsFor(state.regions, size);
   const cells = Array.from({ length: size * size }, (_, index) => {
     const region = state.regions?.[index] ?? 0;
-    const color = REGION_COLORS[region % REGION_COLORS.length];
+    const color = regionColors[region] || REGION_PALETTE[0];
     let content = '';
     if (answer.has(index)) content = '<img class="nailong-img" src="/nailong.png" alt="" draggable="false" />';
     else if (blocked.has(index)) content = '<span class="cross">×</span>';
@@ -327,7 +367,7 @@ function finishedTemplate() {
   const note = revealed
     ? '本局已结束，绿色奶龙就是唯一答案。'
     : state.campaign
-      ? '从 5×5 一路通关到 14×14，合作闯关完成。'
+      ? '从 5×5 一路通关到 13×13，合作闯关完成。'
       : state.mode === 'coop'
         ? '合作模式完成，大家一起通关。'
         : '先正确放完所有奶龙的人获胜。';
@@ -374,10 +414,10 @@ function winTemplate(preview = false) {
       <p class="dragon-win-kicker">ALL CLEAR · 全 部 通 关</p>
       <video class="dragon-angel" src="/angel-nailong.mp4" poster="/angel-poster.png" autoplay muted loop playsinline preload="auto" aria-label="天使奶龙动画"></video>
       <h1>成功飞升天使奶龙</h1>
-      <p class="dragon-win-copy">从 5×5 一路找到 14×14，<br />你已经把整片牧场都找遍了。</p>
+      <p class="dragon-win-copy">从 5×5 一路找到 13×13，<br />你已经把整片牧场都找遍了。</p>
       <div class="dragon-win-stats">
-        <span><b>10</b> 关</span>
-        <span><b>5→14</b> 棋盘</span>
+        <span><b>9</b> 关</span>
+        <span><b>5→13</b> 棋盘</span>
         <span><b>100%</b> 唯一解</span>
       </div>
       ${preview ? `<div class="dragon-win-actions">
@@ -584,6 +624,10 @@ async function handleAction(action) {
       renderState();
     } else if (action === 'undo-hypo') {
       const data = await api('/api/dragon/undo-hypo', { code: session.code, playerId: session.playerId, token: session.token });
+      state = data.state;
+      renderState();
+    } else if (action === 'clear-dragons') {
+      const data = await api('/api/dragon/clear-dragons', { code: session.code, playerId: session.playerId, token: session.token });
       state = data.state;
       renderState();
     } else if (action === 'clear-x') {
