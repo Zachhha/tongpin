@@ -1188,3 +1188,26 @@
   color: #7c4c10;
   border-bottom-style: solid;
 }
+
+/* 固定格子尺寸：叉号和图片绝对定位，避免把格子上下撑长 */
+.dragon-cell {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: block;
+}
+
+.dragon-cell .cross {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.dragon-cell .nailong-img {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+}
