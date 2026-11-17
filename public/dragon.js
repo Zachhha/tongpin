@@ -14,6 +14,9 @@ let lastInvalid = false;
 let errorMessage = '';
 let drag = null;
 let suppressClick = false;
+let winShown = false;
+let starFrame = null;
+let starParticles = [];
 
 const REGION_COLORS = [
   '#ffe08a', '#bde7a4', '#ffc0b2', '#b9ddf3', '#e8c8f2', '#f6d2a0',
@@ -115,11 +118,12 @@ function landingTemplate() {
       <p class="dragon-subtitle">彩色格子里藏着一群奶龙。每行、每列、每个同色区域只能有一只；奶龙之间八个方向都不能相邻。靠排除法把它们全部找出来。</p>
       <div class="dragon-chips">
         <span class="dragon-chip">1–4 人</span>
-        <span class="dragon-chip">5×5 – 12×12</span>
+        <span class="dragon-chip">5×5 – 14×14</span>
         <span class="dragon-chip">每行 / 每列 / 每色块</span>
         <span class="dragon-chip">八方向不相邻</span>
       </div>
       ${errorMessage ? `<p class="dragon-hint" style="color:#b2372c">${esc(errorMessage)}</p>` : ''}
+      <p class="dragon-preview-entry"><a href="/dragon?preview=win">预览 14×14 通关结算 →</a></p>
       <div class="dragon-role-note"><b>两种玩法</b>竞速：每人一块相同棋盘，先完成者赢。合作：共用一块棋盘，一起完成。一个人也可以直接开始。</div>
     </div>
     <div class="dragon-entry-grid">
@@ -186,7 +190,12 @@ function lobbyTemplate() {
           <span class="dragon-option-label">棋盘大小</span>
           <div class="dragon-option-list dragon-size-list">
             ${state.sizes.map((size) => `<button type="button" class="dragon-option dragon-size-option ${!state.campaign && size === state.size ? 'active' : ''}" data-size-option="${size}">${size}×${size}</button>`).join('')}
-            <button type="button" class="dragon-option dragon-size-option dragon-campaign-option ${state.campaign ? 'active' : ''}" data-size-option="campaign">闯关 <span>5→12</span></button>
+            <button type="button" class="dragon-option dragon-size-option dragon-campaign-option ${state.campaign ? 'active' : ''}" data-size-option="campaign">闯关 <span>5→14</span></button>
+          </div>
+          <div class="dragon-custom-size">
+            <label for="dragon-custom-size-input">自定义边长</label>
+            <input id="dragon-custom-size-input" class="dragon-input" type="number" min="5" max="14" step="1" value="${state.size}" data-custom-size />
+            <button type="button" class="dragon-btn secondary" data-action="apply-custom-size">应用</button>
           </div>
         </div>` : `<p class="dragon-hint">玩法：${state.campaign ? '闯关' : state.mode === 'race' ? '竞速' : '合作'} · 棋盘 ${state.size}×${state.size}</p>`}
         <div class="dragon-btn-row">
@@ -318,7 +327,7 @@ function finishedTemplate() {
   const note = revealed
     ? '本局已结束，绿色奶龙就是唯一答案。'
     : state.campaign
-      ? '从 5×5 一路通关到 12×12，合作闯关完成。'
+      ? '从 5×5 一路通关到 14×14，合作闯关完成。'
       : state.mode === 'coop'
         ? '合作模式完成，大家一起通关。'
         : '先正确放完所有奶龙的人获胜。';
@@ -352,9 +361,134 @@ function spectatorTemplate() {
   </div>`;
 }
 
+function campaignComplete() {
+  return Boolean(state?.campaign && state.phase === 'finished' && !state.revealed
+    && Number(state.campaignIndex) === Number(state.campaignTotal) - 1);
+}
+
+function winTemplate(preview = false) {
+  return `<div class="dragon-win">
+    <canvas id="dragon-stars" class="dragon-stars" aria-hidden="true"></canvas>
+    <div class="dragon-win-glow" aria-hidden="true"></div>
+    <section class="dragon-win-card" role="dialog" aria-label="闯关完成">
+      <p class="dragon-win-kicker">ALL CLEAR · 全 部 通 关</p>
+      <video class="dragon-angel" src="/angel-nailong.mp4" poster="/angel-poster.png" autoplay muted loop playsinline preload="auto" aria-label="天使奶龙动画"></video>
+      <h1>成功飞升天使奶龙</h1>
+      <p class="dragon-win-copy">从 5×5 一路找到 14×14，<br />你已经把整片牧场都找遍了。</p>
+      <div class="dragon-win-stats">
+        <span><b>10</b> 关</span>
+        <span><b>5→14</b> 棋盘</span>
+        <span><b>100%</b> 唯一解</span>
+      </div>
+      ${preview ? `<div class="dragon-win-actions">
+        <button class="dragon-btn" disabled>再闯一次</button>
+        <button class="dragon-btn secondary" disabled>分享结果</button>
+        <button class="dragon-btn secondary" disabled>复制双链接</button>
+        <button class="dragon-btn ghost" disabled>退出本局</button>
+      </div><p class="dragon-win-preview">预览模式</p>` : `<div class="dragon-win-actions">
+        ${state?.canRestart ? '<button class="dragon-btn" data-action="restart">再闯一次</button>' : ''}
+        <button class="dragon-btn secondary" data-action="share-result">分享结果</button>
+        <button class="dragon-btn secondary" data-action="copy-links">复制双链接</button>
+        <button class="dragon-btn ghost" data-action="exit">退出本局</button>
+      </div>`}
+    </section>
+  </div>`;
+}
+
+function drawStar(ctx, x, y, radius, alpha, color) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.beginPath();
+  for (let i = 0; i < 8; i += 1) {
+    const angle = (Math.PI / 4) * i - Math.PI / 2;
+    const r = i % 2 === 0 ? radius : radius * 0.38;
+    const px = Math.cos(angle) * r;
+    const py = Math.sin(angle) * r;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.restore();
+}
+
+function startStars() {
+  stopStars();
+  const canvas = document.querySelector('#dragon-stars');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  canvas.width = Math.floor(width * dpr);
+  canvas.height = Math.floor(height * dpr);
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const colors = ['#e3a91b', '#ffd43b', '#f08bb4', '#9e7bdc', '#fff3b0', '#fffdf1'];
+  starParticles = Array.from({ length: Math.min(180, Math.floor((width * height) / 7000)) }, () => ({
+    x: Math.random() * width,
+    y: Math.random() * height,
+    r: 2 + Math.random() * 4.2,
+    speed: 0.55 + Math.random() * 1.5,
+    drift: (Math.random() - 0.5) * 0.45,
+    alpha: 0.55 + Math.random() * 0.45,
+    phase: Math.random() * Math.PI * 2,
+    color: colors[Math.floor(Math.random() * colors.length)],
+  }));
+  let last = performance.now();
+  function paint(delta) {
+    ctx.clearRect(0, 0, width, height);
+    for (const star of starParticles) {
+      star.y += star.speed * delta;
+      star.x += star.drift * delta;
+      star.phase += 0.035 * delta;
+      if (star.y > height + 30) {
+        star.y = -30;
+        star.x = Math.random() * width;
+      }
+      if (star.x < -30) star.x = width + 30;
+      if (star.x > width + 30) star.x = -30;
+      const alpha = star.alpha * (0.72 + Math.sin(star.phase) * 0.28);
+      drawStar(ctx, star.x, star.y, star.r, alpha, star.color);
+    }
+  }
+  paint(0);
+  function frame(now) {
+    const delta = Math.min(2.5, (now - last) / 16.67);
+    last = now;
+    paint(delta);
+    starFrame = requestAnimationFrame(frame);
+  }
+  starFrame = requestAnimationFrame(frame);
+}
+
+function stopStars() {
+  if (starFrame) cancelAnimationFrame(starFrame);
+  starFrame = null;
+  starParticles = [];
+}
+
+function showWin() {
+  winShown = true;
+  app.innerHTML = winTemplate(false);
+  startStars();
+}
+
 function renderState() {
   if (!state) return;
   startPolling();
+  if (campaignComplete()) {
+    if (!winShown) showWin();
+    return;
+  }
+  if (winShown) {
+    winShown = false;
+    stopStars();
+  }
   if (state.viewer.isSpectator) app.innerHTML = spectatorTemplate();
   else if (state.phase === 'lobby') app.innerHTML = lobbyTemplate();
   else if (state.phase === 'playing') app.innerHTML = gameTemplate();
@@ -436,6 +570,14 @@ async function handleAction(action) {
       await copyText(resultText());
     } else if (action === 'export-result') {
       downloadResult();
+    } else if (action === 'apply-custom-size') {
+      const input = document.querySelector('[data-custom-size]');
+      const size = Number(input?.value);
+      if (!Number.isInteger(size) || size < 5 || size > 14) {
+        toast('自定义边长只能是 5–14');
+        return;
+      }
+      await saveSetting({ size });
     } else if (action === 'undo') {
       const data = await api('/api/dragon/undo', { code: session.code, playerId: session.playerId, token: session.token });
       state = data.state;
@@ -686,6 +828,12 @@ app.addEventListener('click', (event) => {
 });
 
 async function boot() {
+  if (params.get('preview') === 'win') {
+    winShown = true;
+    app.innerHTML = winTemplate(true);
+    startStars();
+    return;
+  }
   const code = params.get('code');
   const watching = params.get('watch') === '1';
   if (session && (!code || code.toUpperCase() === session.code)) {

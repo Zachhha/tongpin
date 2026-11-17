@@ -66,6 +66,8 @@ const STATIC_FILES = new Map([
   ['/dragon.css', ['dragon.css', 'text/css; charset=utf-8']],
   ['/dragon.js', ['dragon.js', 'text/javascript; charset=utf-8']],
   ['/nailong.png', ['nailong.png', 'image/png']],
+  ['/angel-nailong.mp4', ['angel-nailong.mp4', 'video/mp4']],
+  ['/angel-poster.png', ['angel-poster.png', 'image/png']],
   ['/terms', ['terms.html', 'text/html; charset=utf-8']],
   ['/terms/', ['terms.html', 'text/html; charset=utf-8']],
   ['/terms.html', ['terms.html', 'text/html; charset=utf-8']],

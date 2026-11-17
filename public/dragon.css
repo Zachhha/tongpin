@@ -1008,3 +1008,183 @@
   color: #b8ae9c;
 }
 
+
+.dragon-custom-size {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--d-line);
+}
+
+.dragon-custom-size label {
+  flex: 0 0 auto;
+  color: var(--d-muted);
+  font-size: 9px;
+}
+
+.dragon-custom-size .dragon-input {
+  width: 74px;
+  min-height: 34px;
+  padding: 5px 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.dragon-custom-size .dragon-btn {
+  min-height: 34px;
+  padding: 5px 10px;
+  font-size: 9px;
+}
+
+/* 14×14 闯关结算：天使奶龙 + 满屏星星 */
+.dragon-win {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255, 226, 122, 0.62), transparent 34%),
+    linear-gradient(160deg, #fff9df 0%, #fff2c4 44%, #f7df8f 100%);
+}
+
+.dragon-stars {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.dragon-win-glow {
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  width: min(78vw, 720px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 250, 210, 0.85), rgba(255, 220, 85, 0.16) 52%, transparent 70%);
+  filter: blur(4px);
+  z-index: 0;
+}
+
+.dragon-win-card {
+  position: relative;
+  z-index: 2;
+  width: min(92vw, 520px);
+  padding: 22px 24px 24px;
+  text-align: center;
+  animation: dragon-win-in 0.55s cubic-bezier(.2, .8, .25, 1) both;
+}
+
+@keyframes dragon-win-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dragon-win-kicker {
+  margin: 0 0 7px;
+  color: #b67b22;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.16em;
+}
+
+.dragon-angel {
+  display: block;
+  width: min(54vw, 270px);
+  aspect-ratio: 1;
+  margin: 0 auto 2px;
+  object-fit: contain;
+  border-radius: 24px;
+  mix-blend-mode: multiply;
+  animation: dragon-angel-float 4.2s ease-in-out infinite;
+}
+
+@keyframes dragon-angel-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-8px) rotate(1deg); }
+}
+
+.dragon-win-card h1 {
+  margin: 0;
+  color: #4b3612;
+  font-family: var(--serif);
+  font-size: clamp(34px, 7vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.08em;
+  text-shadow: 0 3px 0 rgba(255, 255, 255, 0.6);
+}
+
+.dragon-win-copy {
+  margin: 8px 0 13px;
+  color: #8b6b32;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.dragon-win-stats {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 auto 14px;
+}
+
+.dragon-win-stats span {
+  padding: 5px 9px;
+  border: 1px solid rgba(121, 85, 31, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 253, 244, 0.58);
+  color: #9a7a42;
+  font-family: var(--mono);
+  font-size: 8px;
+}
+
+.dragon-win-stats b {
+  color: #c06a2f;
+  font-size: 12px;
+}
+
+.dragon-win-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+}
+
+.dragon-win-preview {
+  color: #b67b22;
+  font-family: var(--mono);
+  font-size: 9px;
+}
+
+@media (max-width: 600px) {
+  .dragon-win-card { padding: 12px 14px 18px; }
+  .dragon-angel { width: min(64vw, 220px); }
+  .dragon-win-stats { gap: 5px; }
+  .dragon-win-stats span { padding: 4px 6px; font-size: 7px; }
+}
+
+.dragon-preview-entry {
+  margin: 12px 0 0;
+}
+
+.dragon-preview-entry a {
+  color: #b67b22;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(182, 123, 34, 0.5);
+  padding-bottom: 2px;
+}
+
+.dragon-preview-entry a:hover {
+  color: #7c4c10;
+  border-bottom-style: solid;
+}
